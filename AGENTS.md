@@ -133,21 +133,19 @@ clean.
 
 ## Cross-lineage review lane
 
-**Proposed named arrangement - pending operator confirmation:** the Codex build
-lane in this repository pairs with the Claude adversarial-review lane in tmux
-pane `w1H:p2`, whose working directory is
-`/home/ddc/dev-environment/jot`. The operator must confirm or replace this
-assignment before it is treated as active; do not silently substitute a
-self-review.
+**Confirmed arrangement (operator, 2026-08-12):** the Codex build lane in this
+repository pairs with the Claude adversarial-review lane in tmux pane
+`w1H:p2`, whose working directory is `/home/ddc/dev-environment/jot`. This is
+the active named cross-review lane; do not silently substitute a self-review.
 
-Once confirmed, the two lineages build and adversarially review each other's
-work. They do not edit the same file concurrently. Cross-review is mandatory
-for product seam changes and phase gates. Review the MVP against the working
-product it replaces, the active bead, and evidence from dogfooding. Do not
-expand review into the crash-safety machinery excluded by `jot-met.7` unless a
-later evidence-backed bead brings that machinery into scope. Findings and
-adjudications live in the cycle's single root review file; an aligned review is
-archived through the transition guard above.
+Under this arrangement, the two lineages build and adversarially review each
+other's work. They do not edit the same file concurrently. Cross-review is
+mandatory for product seam changes and phase gates. Review the MVP against the
+working product it replaces, the active bead, and evidence from dogfooding. Do
+not expand review into the crash-safety machinery excluded by `jot-met.7`
+unless a later evidence-backed bead brings that machinery into scope. Findings
+and adjudications live in the cycle's single root review file; an aligned
+review is archived through the transition guard above.
 
 Review ceremony is bounded at two levels. Within an accepted scope, judge a
 round by defects found and decisions resolved; two consecutive rounds that
