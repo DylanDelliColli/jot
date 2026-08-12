@@ -15,6 +15,11 @@ probe executor, and their fixtures before building the still-unimplemented
 `jot` and `jot-review` capture funnel. Do not infer that a listed product
 surface is available until its bead has landed.
 
+The approved funnel specification is a design of record, not a build order.
+`jot-met.7` governs the capture MVP: parity with the working sable tools plus
+its named cheap improvements, accepted through dogfooding. Richer crash-safety
+machinery remains unbuilt unless observed evidence justifies later work.
+
 ## Product surfaces
 
 - **docs-doctor** validates document structure, metadata, indexes,
@@ -22,8 +27,8 @@ surface is available until its bead has landed.
 - **Probe executor** runs the small typed probe DSL through bounded,
   repository-confined operations.
 - **jot** durably captures ownerless observations in an on-disk event queue.
-- **jot-review** folds and reviews that queue into tracker or documentation
-  effects with crash-safe reconciliation.
+- **jot-review** provides operator-gated curation into tracker or documentation
+  outcomes and runs docs-doctor after documentation changes.
 
 The implementation and its fixture suites are product artifacts. Repository
 consumers supply their own corpus membership and conventions.

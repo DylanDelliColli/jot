@@ -21,6 +21,40 @@ Abacus is a consumer of Jot, not Jot's owner. Keep product code and fixtures
 consumer-neutral. Consumer-specific membership and conventions belong in that
 consumer's configuration, not in Jot's implementation.
 
+## MVP first, fix as we use
+
+Build the smallest usable replacement, put it into real use, and fix failures
+that dogfooding actually exposes. Do not build contingencies for failure modes
+that have not occurred merely because an approved design describes them.
+Complexity earns admission through observed evidence or an explicit current
+requirement, not through plausibility.
+
+The product being replaced is the first seam to verify. Before drafting or
+implementing a replacement, open, read, and use the working product; record
+what it actually does and the observed inadequacy the replacement addresses.
+Only then inspect code, provider, and storage seams. "Verify the seam before
+you draft" is defective when it verifies implementation interfaces but never
+examines the product whose behavior defines parity.
+
+An approved proposal can be a **design of record without being a build
+order**. It preserves decisions and possible future machinery. The active `br`
+bead's stated scope and acceptance criteria are authoritative for what gets
+built now. When a design document is broader, implement only the bead and do
+not infer the remainder as required work.
+
+For the capture funnel, `jot-met.7` is the implementation authority: MVP scope
+is sable-note and sable-review parity plus only the cheap improvements named in
+that bead. The v20 funnel design's event fold, publish protocol,
+two-observation gate, patch artifacts, attempt state machine, reconciliation,
+and crash-injection matrix are explicitly not part of that MVP. They remain
+design of record until an observed failure supports a new bead.
+
+MVP acceptance is dogfooding: install and use the product for real capture and
+curation in Jot and its consumers, with only the smallest smoke check needed to
+show the path works. Turn failures found in use into `jot-` beads carrying the
+observed reproduction and evidence. Do not substitute a speculative fixture
+matrix for opening and using the product.
+
 ## Work tracking and legacy machinery
 
 - Use `br` for every work item in this repository. IDs use the lowercase
@@ -108,11 +142,17 @@ self-review.
 
 Once confirmed, the two lineages build and adversarially review each other's
 work. They do not edit the same file concurrently. Cross-review is mandatory
-for product seam changes, phase gates, and especially the stateful on-disk
-queue, crash-safety, reconciliation, and concurrent-drain work in `jot` and
-`jot-review`. Findings and adjudications live in the cycle's single root review
-file; an aligned review is archived through the transition guard above.
+for product seam changes and phase gates. Review the MVP against the working
+product it replaces, the active bead, and evidence from dogfooding. Do not
+expand review into the crash-safety machinery excluded by `jot-met.7` unless a
+later evidence-backed bead brings that machinery into scope. Findings and
+adjudications live in the cycle's single root review file; an aligned review is
+archived through the transition guard above.
 
-Review ceremony is bounded by defects found and decisions resolved. Two
-consecutive rounds that produce only refinements end the review cycle and send
-the nearest real deliverable forward.
+Review ceremony is bounded at two levels. Within an accepted scope, judge a
+round by defects found and decisions resolved; two consecutive rounds that
+produce only refinements end the cycle. Before and during the cycle, also test
+the scope itself against the working baseline and the smallest usable product.
+A review can catch real defects simply because the artifact under review is
+oversized. Defects caught prove that the round was productive; they do not
+prove that the artifact should have been that large.
