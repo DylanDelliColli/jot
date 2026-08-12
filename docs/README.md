@@ -14,6 +14,7 @@ checks this index for exact agreement with the working tree.
 | path | claim | role | lifecycle | superseded-by |
 |---|---|---|---|---|
 | AGENTS.md | agent operating contract for this repository | contract | active | - |
+| NORTH-STAR.md | repository thesis, beneficiaries, success condition, non-goals, and kill criteria | contract | active | - |
 | README.md | repository front door and validation ledger | contract | active | - |
 | docs/README.md | authoritative whole-corpus map | working | active | - |
 | docs/history/README.md | archive pointer index for retired working records | working | active | - |

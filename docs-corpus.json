@@ -17,7 +17,7 @@
     "exactly_one_file_in_dir": true},
    {"name": "standing", "files": []}],
  "managed_globs": [],
- "managed_files": ["AGENTS.md", "README.md"],
+ "managed_files": ["AGENTS.md", "NORTH-STAR.md", "README.md"],
  "alias_symlinks": ["CLAUDE.md"],
  "historical_files": [],
  "inflight_globs": ["PROPOSAL-*.md", "SHIFT-REPORT-*.md"],
