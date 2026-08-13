@@ -118,26 +118,30 @@ overwrites it at handoff under the guard.
 Every managed document starts with `doc-meta`, appears exactly once in
 `docs/README.md`, and obeys `docs-corpus.json`. The `docs/` tree is closed:
 adding a genre, standing file, or subdirectory requires a reviewed manifest
-change. Run docs-doctor before a push, at phase gates, and at session close.
-Until the tool migrates here, use:
+change. Run docs-doctor before a push, at phase gates, and at session close,
+from this repository's root:
 
 ```sh
-python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py \
-  --repo /home/ddc/dev-environment/jot --json
+python3 tools/docs_doctor.py --repo . --json
+python3 tools/test_docs_doctor.py    # the fixture suite, before touching the tool
 ```
 
-The tool lives in `abacus-v1`, not `abacus`: that repository was renamed on
-2026-08-13 and a new `abacus` was created in its place, so the former path now
-resolves to a tree with no tool in it. `abacus-v1` is frozen. This absolute
-path into another repository is the defect `jot-met.3` retires.
+The tool enforces the structure this repository *declares*: four checks —
+docs-structure, metadata, index-symmetry, and inflight-residency — plus the
+manifest gate and path confinement they need. Seven further checks and the
+probe executor are deferred, not rejected; they remain in the frozen
+`abacus-v1` parts bin and return only by being ported here against an
+observed need. Do not reach into that tree to run a check jot has not
+adopted.
 
-After migration, the equivalent repository-local command is authoritative.
 `failed` and `execution_error` block landing. A `degraded` result is allowed
 only when every finding is accounted for — traceable to an open bead or to a
-recorded decision; never call it clean. Do not reword a bead to silence a
-finding: `reverse-citations` flags any mention of a filename, including a
-closed bead explaining why that file will never exist here, and editing the
-record to quiet the tool corrupts the record to flatter the check.
+recorded decision; never call it clean. Never edit a record to silence a
+finding. The deferred `reverse-citations` check made the cost visible: it
+flags any mention of a filename, including a closed bead explaining why that
+file will never exist here, and twice the resolution taken was to reword the
+tracker rather than the tree. A record edited to quiet a tool is a record
+corrupted to flatter it, and that holds for whichever check is running.
 
 Record the run on the bead you are landing, not in a table. This check is
 instant and deterministic, so current state is obtained by running it — a

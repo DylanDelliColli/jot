@@ -9,11 +9,10 @@ Jot is the home of reusable documentation governance and durable observation
 capture. It is being extracted from its incubation in abacus so that abacus
 and other repositories can consume the machinery without owning it.
 
-The repository contains its foundation contract and the `jot` capture command.
-Subsequent tracked work will migrate the operator-approved funnel
-specification, docs-doctor, probe executor, and their fixtures, and build the
-`jot-review` curation skill. Do not infer that a listed product surface is
-available until its bead has landed.
+The repository contains its foundation contract, the `jot` capture command,
+and docs-doctor. Subsequent tracked work builds the `jot-review` curation
+skill. Do not infer that a listed product surface is available until its bead
+has landed.
 
 The approved funnel specification is a design of record, not a build order.
 `jot-met.7` governs the capture MVP: parity with the working sable tools plus
@@ -22,10 +21,25 @@ machinery remains unbuilt unless observed evidence justifies later work.
 
 ## Product surfaces
 
-- **docs-doctor** validates document structure, metadata, indexes,
-  supersession, probes, tracker citations, and archive reachability.
-- **Probe executor** runs the small typed probe DSL through bounded,
-  repository-confined operations.
+- **docs-doctor** enforces the documentation structure a repository declares
+  in `docs-corpus.json` — the enforcement is real, the declaration is the
+  repository's. Landed in `jot-met.3`; `tools/docs_doctor.py` is stdlib-only.
+  Four checks ship: docs-structure (every file matches exactly one declared
+  class), metadata (`doc-meta` blocks agree with their class), index-symmetry
+  (`docs/README.md` lists exactly the managed corpus), and inflight-residency
+  (one review file per cycle, one shift report per lane).
+
+  ```sh
+  python3 tools/docs_doctor.py --repo . --json   # exit 1 failed, 2 execution_error
+  python3 tools/test_docs_doctor.py              # the fixture suite
+  ```
+
+  Seven further checks — supersession, probes, bead-citations,
+  historical-bytes, archive-index, reverse-citations, evidence-index — and the
+  probe executor they need are deferred, not rejected. They remain in the
+  frozen `abacus-v1` tree and return only by being ported here against an
+  observed need.
+
 - **jot** durably captures ownerless observations as one JSON file per note in
   an on-disk queue. Landed in `jot-met.7.1`; `tools/jot.py` is stdlib-only and
   runs from anywhere on PATH. The queue lives at `<git-common-dir>/jot/pending`
