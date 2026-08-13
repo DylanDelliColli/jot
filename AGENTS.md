@@ -62,6 +62,17 @@ matrix for opening and using the product.
   changing the tree.
 - Never use `bd` or `sable-note` here. Do not invoke other legacy SABLE
   workflow machinery for Jot work.
+- Capture what you notice but are not acting on with `jot "<observation>"`,
+  with `--file`, `--symptom`, `--repro` and `--why` where you have them.
+  Curate with `jot-review`, which is **operator-invoked only** — never on a
+  schedule, a hook, or at session close. A blocking defect is the carve-out:
+  bead it immediately rather than capturing it.
+  Both lineages invoke it as `/jot-review`. It installs once, into the
+  shared `~/.agents/skills/`, which Codex reads directly and which
+  `~/.claude/skills/` symlinks into — so a skill placed only under
+  `~/.claude/skills/` is invisible to Codex. Its `allowed-tools` front
+  matter is a Claude construct and constrains nothing under Codex, where
+  the sandbox does.
 - Honor bead dependencies and operator lane boundaries. Do not begin blocked
   work merely because its prerequisites look approachable.
 - A consumer checkout is read-only unless an operator explicitly coordinates

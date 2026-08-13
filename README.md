@@ -9,10 +9,10 @@ Jot is the home of reusable documentation governance and durable observation
 capture. It is being extracted from its incubation in abacus so that abacus
 and other repositories can consume the machinery without owning it.
 
-The repository contains its foundation contract, the `jot` capture command,
-and docs-doctor. Subsequent tracked work builds the `jot-review` curation
-skill. Do not infer that a listed product surface is available until its bead
-has landed.
+The repository contains its foundation contract, docs-doctor, and both halves
+of the capture funnel: the `jot` command and the `jot-review` curation skill.
+Do not infer that a listed product surface is available until its bead has
+landed.
 
 The approved funnel specification is a design of record, not a build order.
 `jot-met.7` governs the capture MVP: parity with the working sable tools plus
@@ -47,9 +47,22 @@ machinery remains unbuilt unless observed evidence justifies later work.
   jot dir                                      # queue path
   ```
 
-- **jot-review** provides operator-gated curation into tracker or documentation
-  outcomes and runs docs-doctor after documentation changes. Not yet built;
-  tracked by `jot-met.7`.
+- **jot-review** curates pending notes into beads, documentation changes, or
+  nothing, and runs docs-doctor after any documentation change. Landed in
+  `jot-met.7`. Discard is the default disposition and only the operator may
+  promote — a pass that promotes most of what it sees has failed.
+
+  ```sh
+  ln -s "$PWD/skills/jot-review" ~/.agents/skills/jot-review        # install
+  ln -s ../../.agents/skills/jot-review ~/.claude/skills/jot-review
+  /jot-review
+  ```
+
+  Install into the shared `~/.agents/skills/`, not `~/.claude/skills/`.
+  Codex reads the shared directory directly and Claude symlinks into it; a
+  skill placed only under `~/.claude/skills/` is invisible to Codex. The
+  `allowed-tools` front matter is a Claude construct and constrains nothing
+  under Codex, where the sandbox does.
 
 The implementation and its fixture suites are product artifacts. Repository
 consumers supply their own corpus membership and conventions.
