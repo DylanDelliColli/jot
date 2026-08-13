@@ -29,6 +29,13 @@ from pathlib import Path
 QUEUE_PARTS = ("jot", "pending")
 OPTIONAL_FIELDS = ("file", "symptom", "repro", "why")
 
+# A nudge, never a gate. At roughly this many pending notes, capture reminds
+# the operator that a review is due — it must never refuse a capture or force
+# a review, because capture staying free is the whole point of the queue. The
+# number is a guess and is meant to be recalibrated by feel; being wrong costs
+# nothing, because it prompts rather than blocks.
+NUDGE_AT = 20
+
 
 class JotError(Exception):
     """A failure whose message is meant for the operator, not a traceback."""
@@ -147,8 +154,13 @@ def cmd_capture(argv, cwd, stdout):
     if not text:
         raise JotError('an observation is required: jot "<what you noticed>"')
     note = build_note(text, options, cwd, datetime.now(timezone.utc))
-    path = write_note(queue_dir(cwd), note)
+    queue = queue_dir(cwd)
+    path = write_note(queue, note)
     print(f"noted → {path}", file=stdout)
+    pending = len(list(queue.glob("*.json")))
+    if pending >= NUDGE_AT:
+        print(f"\n{pending} notes are pending — time for a review pass "
+              f"(jot-review).", file=stdout)
     return 0
 
 

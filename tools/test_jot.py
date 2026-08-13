@@ -171,6 +171,29 @@ def test_empty_observation(root):
     check("empty.rejected", code == 2 and "observation is required" in err, f"code={code} err={err!r}")
 
 
+def test_nudge_prompts_but_never_blocks(root):
+    """At the threshold capture must still succeed — a gate here would make
+    capture cost something, which is the one thing it may never do."""
+    from tools.jot import NUDGE_AT
+    repo = make_repo(os.path.join(root, "nudge"))
+    for i in range(NUDGE_AT - 2):
+        run([f"note {i}"], repo)
+    code, out, _ = run(["the one below the threshold"], repo)
+    # not the bare word "pending" — the queue path contains it
+    check("nudge.silent_below_threshold",
+          code == 0 and "jot-review" not in out, f"code={code} out={out!r}")
+
+    code, out, _ = run(["the one that reaches it"], repo)
+    check("nudge.prompts_at_threshold",
+          code == 0 and f"{NUDGE_AT} notes are pending" in out
+          and "jot-review" in out, f"code={code} out={out!r}")
+
+    code, _, _ = run(["and capture still works past it"], repo)
+    check("nudge.never_blocks_capture",
+          code == 0 and len(notes_in(repo)) == NUDGE_AT + 1,
+          f"code={code} count={len(notes_in(repo))}")
+
+
 def main_():
     with tempfile.TemporaryDirectory() as root:
         for case in (
@@ -183,6 +206,7 @@ def main_():
             test_outside_repo,
             test_dir_subcommand,
             test_empty_observation,
+            test_nudge_prompts_but_never_blocks,
         ):
             try:
                 case(root)
