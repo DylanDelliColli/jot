@@ -122,9 +122,14 @@ change. Run docs-doctor before a push, at phase gates, and at session close.
 Until the tool migrates here, use:
 
 ```sh
-python3 /home/ddc/dev-environment/abacus/tools/docs_doctor.py \
+python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py \
   --repo /home/ddc/dev-environment/jot --json
 ```
+
+The tool lives in `abacus-v1`, not `abacus`: that repository was renamed on
+2026-08-13 and a new `abacus` was created in its place, so the former path now
+resolves to a tree with no tool in it. `abacus-v1` is frozen. This absolute
+path into another repository is the defect `jot-met.3` retires.
 
 After migration, the equivalent repository-local command is authoritative.
 `failed` and `execution_error` block landing. A `degraded` result is allowed

@@ -185,7 +185,8 @@ the two items above.
 3. `python3 tools/test_jot.py`
 4. `jot list` — confirms the pending notes survived; if `jot` is not on PATH,
    install per `README.md` first
-5. `python3 /home/ddc/dev-environment/abacus/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json`
+5. `python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json`
+   — the path is `abacus-v1`, corrected after this report landed; see section 9.
 
 **First consequential act:** claim `jot-met.3` and migrate the tools. It is
 ready, it unblocks `.4`, `.5`, and `.6`, and it retires H3. Do this before
@@ -226,8 +227,27 @@ settle alone.
   weight check, and understated the imbalance. No durable artifact carried the
   wrong figure; it is noted here only so the incoming agent does not rediscover
   the corrected reasoning as if it were new.
-- No defect has been found in this report after landing. If one is, append it
-  here rather than editing the failed claim away.
+- **Dead command in the boot sequence — hazard H3 fired within a day.**
+  Step 5 of section 8 invoked docs-doctor at
+  `/home/ddc/dev-environment/abacus/tools/docs_doctor.py`. Overnight
+  2026-08-12/13 the abacus repository was renamed `abacus-v1` and a fresh
+  `abacus` was created in its place, so that path resolves to a tree with no
+  tool in it and the incoming agent's first probe would have failed. Corrected
+  to `abacus-v1` in section 8 and in `AGENTS.md`; tracked as `jot-d9m`.
+  Reported cross-lane by the abacus orchestrator at intake — this repository's
+  own probe did not catch it, because the probe *was* the broken command.
+  Three points worth carrying forward: H3 named this failure mode exactly and
+  it fired in under 24 hours, which is evidence for `jot-met.3` rather than a
+  surprise; the `README.md` ledger rows at lines 65 and 67 were deliberately
+  **not** rewritten, because they record commands actually run on 2026-08-12
+  and rewriting them would falsify the evidence table; and the re-run from the
+  corrected path reproduces the ledger baseline exactly — `degraded`, the same
+  two `reverse-citations` findings, 0 execution errors — so only the path
+  moved, not the result.
+- The rename also degraded `jot-met.3` beyond a path swap; see that bead's
+  notes before treating section 8's "first consequential act" as still costed.
+- No further defect has been found in this report after landing. If one is,
+  append it here rather than editing the failed claim away.
 
 ## 10. Closeout pointer
 
