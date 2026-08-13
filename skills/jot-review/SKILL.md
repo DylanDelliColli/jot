@@ -4,7 +4,7 @@ description: |
   Curate the pending notes captured by `jot` into beads, documentation
   changes, or nothing. Reads one-JSON-file-per-note from the queue at
   `jot dir`, proposes a disposition for each, and after operator decisions
-  files beads via `br create --external-ref`, applies documentation edits,
+  files beads via `br create`, applies documentation edits,
   and archives what it processed.
   Use when asked to "review my notes", "/jot-review", "process the jot
   queue", "curate captured notes", or when `jot` says a review is due.
@@ -87,17 +87,24 @@ operator can rescue any you got wrong.
 
 ### 5. Apply what was approved
 
-**BEAD** — file it, carrying the note id so the bead traces back to its
-capture:
+**BEAD** — file it:
 
 ```bash
 br create --title "<title>" --type <type> --priority <n> \
-          --description "<text>" --external-ref "<note id>"
+          --description "<text>"
 ```
 
-`--external-ref` is the one tracker operation Jot wraps and is pinned in
+`br create` is the one tracker operation Jot wraps and is pinned in
 `docs/compatibility/2026-08-13-br-pin.md`. If `br` is missing or fails, stop
 and tell the operator — do not fall back to writing the bead somewhere else.
+
+**Do not carry the note id onto the bead.** It is tempting — `br create`
+takes `--external-ref` and it looks like provenance — but the note is deleted
+at the end of this pass, so the reference dangles by construction, and
+north-star non-goal 8 forbids retaining notes for later reference at all. The
+bead must stand on its own: if it cannot be acted on without its note, the
+bead is not finished. Promotion **is** the durability mechanism, which is why
+a note can be thrown away the moment its bead exists.
 
 **DOC** — apply the edit, then **run docs-doctor and report the result**:
 
