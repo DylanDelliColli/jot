@@ -21,7 +21,9 @@ discovery, and path-confinement machinery they need. Cases for the seven
 deferred checks stayed with them in the frozen abacus-v1 tree; see
 tools/docs_doctor.py for what was deferred and why.
 """
+import contextlib
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -1036,11 +1038,135 @@ def _(root):
 
 
 # ------------------------------------------------------------------ manifest --
-@case("manifest_missing")
+@case("manifest_missing_names_its_remedy")
 def _(root):
+    # the cold start is the first thing anyone adopting the tool sees; a
+    # bare "manifest missing" is a dead end
     os.unlink(os.path.join(root, "docs-corpus.json"))
-    expect("manifest_missing", run_doctor(root), "execution_error",
-           "manifest missing")
+    expect("manifest_missing_names_its_remedy", run_doctor(root),
+           "execution_error", "manifest missing", "--init", "--classes")
+
+
+# ------------------------------------------------------------- cold start --
+def fresh_repo(root, name, files, links=()):
+    """A git repo with documents and NO manifest — an adoption candidate."""
+    repo = os.path.join(root, name)
+    os.makedirs(repo)
+    sh(repo, "git", "init", "-q", "-b", "main")
+    sh(repo, "git", "config", "user.email", "f@example.com")
+    sh(repo, "git", "config", "user.name", "F")
+    for rel, text in files.items():
+        write(repo, rel, text)
+    for link, target in links:
+        os.symlink(target, os.path.join(repo, link))
+    sh(repo, "git", "add", "-A")
+    sh(repo, "git", "commit", "-qm", "documents, no manifest")
+    return repo
+
+
+def init(repo, force=False):
+    """cmd_init with its operator-facing narration captured, not printed."""
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+        rc = docs_doctor.cmd_init(repo, force)
+    return rc, out.getvalue()
+
+
+COLD_START = {"README.md": "# my project\n",
+              "AGENTS.md": "# agent contract\n",
+              "docs/adr/0001-pick-a-db.md": "# pick a db\n",
+              "docs/architecture.md": "# how it fits together\n"}
+
+
+@case("init_reaches_an_actionable_state")
+def _(root):
+    """Setup must end somewhere the author can act, not at another wall:
+    after init the only findings left are per-document ones they own."""
+    repo = fresh_repo(root, "cold", COLD_START, links=[("CLAUDE.md",
+                                                        "AGENTS.md")])
+    rc, _ = init(repo)
+    r = run_doctor(repo)
+    unactionable = [f for f in r["findings"]
+                    if "doc-meta" not in f["reason"]]
+    check("init_reaches_an_actionable_state",
+          rc == 0 and not unactionable
+          and any(f["reason"] == "missing doc-meta block"
+                  for f in r["findings"]),
+          f"rc={rc} unactionable={json.dumps(unactionable)[:300]}")
+
+
+@case("init_output_survives_the_author_finishing_it")
+def _(root):
+    """The scaffold must not plant a failure that fires later. Adding the
+    doc-meta blocks init asked for has to reach a passing run."""
+    repo = fresh_repo(root, "finish", COLD_START, links=[("CLAUDE.md",
+                                                          "AGENTS.md")])
+    init(repo)
+    for rel in ("docs/adr/0001-pick-a-db.md", "docs/architecture.md"):
+        with open(os.path.join(repo, rel), encoding="utf-8") as fh:
+            body = fh.read()
+        write(repo, rel, meta_block({"role": "contract",
+                                     "lifecycle": "active"}) + "\n\n" + body)
+    r = run_doctor(repo)
+    check("init_output_survives_the_author_finishing_it",
+          r["exit"] == 0 and not [f for f in r["findings"]
+                                  if f["result"] not in ("degraded", "info")],
+          f"aggregate={r['aggregate']} {json.dumps(r['findings'])[:300]}")
+
+
+@case("init_declares_only_present_classes")
+def _(root):
+    """Honest opening declaration: setup must not pre-authorise genres the
+    repository does not have, or the closed-world rule starts life defeated."""
+    repo = fresh_repo(root, "narrow", COLD_START)
+    init(repo)
+    with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
+        mem = json.load(fh)
+    absent = [n for n in ("prd", "evidence", "evidence-index",
+                          "archive-index", "standing")
+              if n in mem["classes"]]
+    write(repo, "docs/prd/0001-a-product.md", "# p\n")
+    check("init_declares_only_present_classes",
+          not absent and mem["classes"] == ["adr", "corpus-index",
+                                            "architecture"]
+          and any(f["reason"] == "unknown subdirectory under docs/"
+                  for f in run_doctor(repo)["findings"]),
+          f"declared={mem['classes']} unexpected={absent}")
+
+
+@case("init_refuses_to_overwrite")
+def _(root):
+    repo = fresh_repo(root, "existing", COLD_START)
+    init(repo)
+    write(repo, "docs-corpus.json", '{"hand": "written"}')
+    rc, message = init(repo)
+    with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
+        kept = fh.read()
+    rc_forced, _ = init(repo, force=True)
+    with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
+        replaced = fh.read()
+    check("init_refuses_to_overwrite",
+          rc == 2 and '"hand"' in kept and "--force" in message
+          and rc_forced == 0 and "conforms_to" in replaced,
+          f"rc={rc} rc_forced={rc_forced} kept={kept[:60]}")
+
+
+@case("init_output_is_conformant_membership")
+def _(root):
+    """Whatever init writes must pass the same validator a hand-written
+    file faces — including the version gate it just stamped."""
+    repo = fresh_repo(root, "conformant", COLD_START,
+                      links=[("CLAUDE.md", "AGENTS.md")])
+    init(repo)
+    with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
+        mem = json.load(fh)
+    errs = Doctor._validate_membership(mem)
+    composed = Doctor._compose(mem)
+    check("init_output_is_conformant_membership",
+          not errs and not Doctor._validate_manifest(composed)
+          and mem["conforms_to"] == docs_doctor.CLASS_LIBRARY_VERSION,
+          f"membership={errs} composed="
+          f"{Doctor._validate_manifest(composed)}")
 
 
 @case("manifest_missing_classes_key")
@@ -1135,6 +1261,31 @@ def _(root):
         indexes_class=[]))
     expect("library_indexes_class_wrong_type", run(root), "execution_error",
            "must name a dir class")
+
+
+@case("library_class_without_summary")
+def _(root):
+    """Every class must say where its documents live: the membership file
+    names classes and nothing else, so an unsummarised class would be
+    undiscoverable to the person writing that file."""
+    def drop(lib):
+        library_class(lib, "adr").pop("summary")
+    expect("library_class_without_summary", with_library(drop)(root),
+           "execution_error", "needs a nonempty summary")
+
+
+@case("class_listing_names_every_class")
+def _(root):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = docs_doctor.print_class_library()
+    text = out.getvalue()
+    missing = [c["name"] for c in docs_doctor.CLASS_LIBRARY["classes"]
+               if c["name"] not in text or c["summary"] not in text]
+    check("class_listing_names_every_class",
+          rc == 0 and not missing
+          and docs_doctor.CLASS_LIBRARY_VERSION in text,
+          f"rc={rc} missing={missing}")
 
 
 @case("library_wrong_frozen_literal")

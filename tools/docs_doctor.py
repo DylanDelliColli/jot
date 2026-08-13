@@ -75,20 +75,36 @@ CLASS_LIBRARY_VERSION = "1"
 CLASS_LIBRARY = {
     "classes": [
         {"name": "prd", "dir": "docs/prd", "basename_regex": NUMBERED,
-         "unique_by": "number", "role": "contract"},
+         "unique_by": "number", "role": "contract",
+         "summary": "docs/prd/0001-some-slug.md — numbered product "
+                    "requirements, one document per number"},
         {"name": "adr", "dir": "docs/adr", "basename_regex": NUMBERED,
-         "unique_by": "number", "role": "contract"},
+         "unique_by": "number", "role": "contract",
+         "summary": "docs/adr/0001-some-slug.md — numbered architecture "
+                    "decisions, one document per number"},
         {"name": "evidence", "dir": "docs/compatibility",
          "basename_regex": DATED, "calendar_date_group": "date",
-         "role": "evidence"},
+         "role": "evidence",
+         "summary": "docs/compatibility/2026-08-13-some-slug.md — dated "
+                    "observation records; the date must be a real one"},
         {"name": "evidence-index", "file": "docs/compatibility/README.md",
-         "indexes_class": "evidence"},
-        {"name": "corpus-index", "file": "docs/README.md"},
+         "indexes_class": "evidence",
+         "summary": "docs/compatibility/README.md — index of the evidence "
+                    "records"},
+        {"name": "corpus-index", "file": "docs/README.md",
+         "summary": "docs/README.md — the corpus map; every managed "
+                    "document needs a row here"},
         {"name": "architecture", "file": "docs/architecture.md",
-         "role": "contract"},
+         "role": "contract",
+         "summary": "docs/architecture.md — one standing architecture "
+                    "contract"},
         {"name": "archive-index", "file": "docs/history/README.md",
-         "exactly_one_file_in_dir": True},
-        {"name": "standing", "files": []},   # members come from membership
+         "exactly_one_file_in_dir": True,
+         "summary": "docs/history/README.md — archive pointer index, and "
+                    "the only file docs/history/ may hold"},
+        {"name": "standing", "files": [],   # members come from membership
+         "summary": "the documents you list in standing_files — one-off "
+                    "standing documents that fit no other class"},
     ],
     "discovery": {
         "docs": "filesystem walk of docs/, no ignore filtering",
@@ -345,8 +361,13 @@ class Doctor:
         change."""
         path = os.path.join(self.repo, "docs-corpus.json")
         if not os.path.isfile(path):
+            # a cold start must name its own remedy: this is the first thing
+            # anyone adopting the tool sees
             self.find("execution", "docs-corpus.json", "-", "execution_error",
-                      "manifest missing")
+                      "manifest missing: this repository has not been set up "
+                      "yet. Run docs_doctor.py --repo <path> --init to write "
+                      "one matching the documents it already has, or --classes "
+                      "to see what may be declared.")
             return False
         try:
             with open(path, encoding="utf-8") as fh:
@@ -458,11 +479,14 @@ class Doctor:
                 "alias_symlinks", "historical_files", "inflight_globs",
                 "protected_mainline_ref", "discovery", "regex_semantics",
                 "glob_semantics"}
+    # `summary` is the class's own plain-language description of where its
+    # documents live. It is required, so `--classes` can never answer "what
+    # may I declare, and where does it go?" with a blank.
     CLASS_KEYS = {"dir": {"name", "dir", "basename_regex", "unique_by",
-                          "calendar_date_group", "role"},
+                          "calendar_date_group", "role", "summary"},
                   "file": {"name", "file", "role", "indexes_class",
-                           "exactly_one_file_in_dir"},
-                  "files": {"name", "files", "role"}}
+                           "exactly_one_file_in_dir", "summary"},
+                  "files": {"name", "files", "role", "summary"}}
     # The implementation hardcodes these semantics. The check used to guard
     # against a per-repo COPY of the manifest lying about them; with the
     # library shipped alongside the code that failure mode is gone, and what
@@ -588,6 +612,9 @@ class Doctor:
             role = c.get("role")
             if role is not None and role not in ROLES:
                 errs.append(f"class {n}: role {role} not in {ROLES}")
+            if not isinstance(c.get("summary"), str) or not c["summary"]:
+                errs.append(f"class {n}: needs a nonempty summary saying "
+                            "where its documents live")
         for c in classes:
             if not isinstance(c, dict):
                 continue
@@ -1064,11 +1091,214 @@ class Doctor:
                 "findings": self.findings}
 
 
+def derive_membership(repo):
+    """Read a repository and propose the membership that matches it.
+
+    Declares a class only where the repository already has documents for it,
+    so setup does not pre-authorise genres nobody uses — the closed-world
+    rule is only worth anything if the opening declaration is honest.
+    Returns (membership, [notes for the operator])."""
+    repo = os.path.realpath(repo)
+    notes = []
+
+    def rel(*parts):
+        return os.path.join(repo, *parts)
+
+    present = []
+    for spec in CLASS_LIBRARY["classes"]:
+        if "dir" in spec:
+            d = rel(spec["dir"])
+            if os.path.isdir(d) and any(
+                    re.fullmatch(spec["basename_regex"], n)
+                    for n in os.listdir(d)):
+                present.append(spec["name"])
+        elif "file" in spec and os.path.isfile(rel(spec["file"])):
+            present.append(spec["name"])
+    # the corpus index is not optional: every other check reports against it,
+    # so a repository that lacks one is getting scaffolded, not excused
+    if "corpus-index" not in present:
+        present.append("corpus-index")
+
+    standing = []
+    docs_dir = rel("docs")
+    if os.path.isdir(docs_dir):
+        claimed = {c.get("file") for c in CLASS_LIBRARY["classes"]}
+        claimed_dirs = {c["dir"] for c in CLASS_LIBRARY["classes"]
+                        if "dir" in c}
+        for name in sorted(os.listdir(docs_dir)):
+            p = f"docs/{name}"
+            if name.endswith(".md") and os.path.isfile(rel(p)) \
+                    and p not in claimed:
+                standing.append(p)
+        for name in sorted(os.listdir(docs_dir)):
+            sub = f"docs/{name}"
+            if os.path.isdir(rel(sub)) and sub not in claimed_dirs:
+                notes.append(f"{sub}/ matches no shipped class; move its "
+                             f"documents or the tree will report it as an "
+                             f"unknown subdirectory")
+    if standing:
+        present.append("standing")
+
+    managed, aliases = [], []
+    for name in sorted(os.listdir(repo)):
+        if not name.endswith(".md"):
+            continue
+        if os.path.islink(rel(name)):
+            aliases.append(name)
+        elif os.path.isfile(rel(name)):
+            managed.append(name)
+    inflight = [g for g in ("PROPOSAL-*.md", "SHIFT-REPORT-*.md")
+                if any(fnmatch.fnmatch(m, g) for m in managed)]
+    managed = [m for m in managed
+               if not any(fnmatch.fnmatch(m, g) for g in inflight)]
+
+    order = [c["name"] for c in CLASS_LIBRARY["classes"]]
+    return {"conforms_to": CLASS_LIBRARY_VERSION,
+            "classes": sorted(set(present), key=order.index),
+            "standing_files": standing,
+            "managed_globs": [],
+            "managed_files": managed,
+            "alias_symlinks": aliases,
+            "historical_files": [],
+            "inflight_globs": inflight or ["PROPOSAL-*.md",
+                                           "SHIFT-REPORT-*.md"],
+            "protected_mainline_ref": "refs/heads/main"}, notes
+
+
+def render_membership(mem):
+    """Stable, readable JSON — this file is read by people far more often
+    than it is written."""
+    lines = ['{"conforms_to": %s,' % json.dumps(mem["conforms_to"])]
+    for key in ("classes", "standing_files", "managed_globs",
+                "managed_files", "alias_symlinks", "historical_files",
+                "inflight_globs"):
+        lines.append(f' {json.dumps(key)}: {json.dumps(mem[key])},')
+    lines.append(' "protected_mainline_ref": %s}'
+                 % json.dumps(mem["protected_mainline_ref"]))
+    return "\n".join(lines) + "\n"
+
+
+def scaffold_corpus_index(repo, mem):
+    """A starter docs/README.md listing what init found.
+
+    Without it the first run after setup reports every managed document as
+    'corpus index absent', which is a wall rather than a next step. Rows
+    carry a placeholder claim the author is expected to replace."""
+    doctor = Doctor(repo)
+    doctor.manifest = Doctor._compose(mem)
+    doctor.classify_docs()
+    doctor.discover_tracked()
+    if doctor.tracked is None or not doctor.docs_observed:
+        return None
+    doctor.collect_managed()
+    index_rel = next(c["file"] for c in doctor.manifest["docs_classes"]
+                     if c["name"] == "corpus-index")
+    rows = ["| path | claim | role | lifecycle | superseded-by |",
+            "|---|---|---|---|---|"]
+    # the index is itself a managed document; it does not exist yet, so
+    # collect_managed cannot see it and it must be added by hand or the
+    # first run after setup reports the scaffold as an orphan
+    for path in sorted(set(doctor.managed) | {index_rel}):
+        meta, _ = parse_doc_meta(doctor._read(path) or "")
+        # a class that fixes a role wins over the file's own header: writing
+        # the wrong one here plants a disagreement that fires later, when
+        # the author adds the doc-meta block this row stands in for
+        spec = next((c for c in doctor.manifest["docs_classes"]
+                     if c["name"] == doctor.docs_files.get(path)), None)
+        role = (spec or {}).get("role") \
+            or ("contract" if path in doctor.modules else None) \
+            or (meta or {}).get("role") or "working"
+        lifecycle = (meta or {}).get("lifecycle") or "active"
+        rows.append(f"| {path} | TODO describe this document | {role} "
+                    f"| {lifecycle} | - |")
+    alias_rows = []
+    for alias in mem["alias_symlinks"]:
+        target = os.path.normpath(os.path.join(
+            os.path.dirname(alias),
+            os.readlink(os.path.join(os.path.realpath(repo), alias))))
+        alias_rows += [f"| {alias} | {target} |"]
+    text = ["```doc-meta", "role: working", "lifecycle: active", "```", "",
+            "# Documentation corpus index", "",
+            "Every managed document appears here exactly once.", ""]
+    text += rows
+    if alias_rows:
+        text += ["", "## Aliases", "", "| path | alias-of |", "|---|---|"]
+        text += alias_rows
+    return "\n".join(text) + "\n"
+
+
+def cmd_init(repo, force):
+    """Turn a repository with documents into one docs-doctor can check."""
+    repo = os.path.realpath(repo)
+    manifest_path = os.path.join(repo, "docs-corpus.json")
+    if os.path.exists(manifest_path) and not force:
+        print(f"docs-corpus.json already exists; refusing to overwrite it.\n"
+              f"Pass --force to replace it, or edit it by hand — run "
+              f"--classes to see what may be declared.", file=sys.stderr)
+        return 2
+    mem, notes = derive_membership(repo)
+    written = []
+    with open(manifest_path, "w", encoding="utf-8") as fh:
+        fh.write(render_membership(mem))
+    written.append("docs-corpus.json")
+    index_path = os.path.join(repo, "docs", "README.md")
+    if not os.path.exists(index_path):
+        body = scaffold_corpus_index(repo, mem)
+        if body is not None:
+            os.makedirs(os.path.dirname(index_path), exist_ok=True)
+            with open(index_path, "w", encoding="utf-8") as fh:
+                fh.write(body)
+            written.append("docs/README.md")
+
+    print(f"wrote {', '.join(written)}")
+    print(f"declared classes: {', '.join(mem['classes'])}")
+    for note in notes:
+        print(f"note: {note}")
+    print("\nDeclared only the classes this repository already has documents "
+          "for.\nRun --classes to see what else may be declared; adding a "
+          "genre is a\ndeliberate edit to the classes array.\n")
+    print("Next: run the check. Remaining findings are yours to act on —\n"
+          "typically a doc-meta block per document and a real claim for\n"
+          "each row of docs/README.md.")
+    return 0
+
+
+def print_class_library():
+    """Answer 'what may I declare, and where does each thing go?' from the
+    tool, so the membership file's class names are never the only clue."""
+    print(f"class library version {CLASS_LIBRARY_VERSION} — list these names "
+          f'in the "classes" array of docs-corpus.json.')
+    print("Declaring a class ADMITS that location; omitting it forbids "
+          "the location entirely.\n")
+    width = max(len(c["name"]) for c in CLASS_LIBRARY["classes"])
+    for c in CLASS_LIBRARY["classes"]:
+        print(f"  {c['name']:<{width}}  {c['summary']}")
+    print("\nEverything else in docs-corpus.json is membership: "
+          "standing_files,\nmanaged_files (root documents), managed_globs "
+          "(e.g. mod-*/README.md),\nalias_symlinks, historical_files, and "
+          "inflight_globs (root working\nrecords such as PROPOSAL-*.md).")
+    return 0
+
+
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description="Check a repository's documentation corpus against the "
+                    "structure it declares in docs-corpus.json.")
     ap.add_argument("--repo", default=".")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--classes", action="store_true",
+                    help="list the document classes this tool ships, and "
+                         "where each one's documents live, then exit")
+    ap.add_argument("--init", action="store_true",
+                    help="set this repository up: write a docs-corpus.json "
+                         "matching the documents it already has")
+    ap.add_argument("--force", action="store_true",
+                    help="with --init, replace an existing docs-corpus.json")
     args = ap.parse_args()
+    if args.classes:
+        return print_class_library()
+    if args.init:
+        return cmd_init(args.repo, args.force)
     doctor = Doctor(args.repo)
     report = doctor.run()
     if args.json:

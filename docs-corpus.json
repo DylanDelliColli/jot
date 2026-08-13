@@ -1,6 +1,14 @@
 {"conforms_to": "1",
- "classes": ["prd", "adr", "evidence", "evidence-index", "corpus-index",
-             "architecture", "archive-index", "standing"],
+ "classes": [
+            "prd", 
+            "adr", 
+            "evidence", 
+            "evidence-index", 
+            "corpus-index",
+            "architecture", 
+            "archive-index", 
+            "standing"
+        ],
  "standing_files": [],
  "managed_globs": [],
  "managed_files": ["AGENTS.md", "NORTH-STAR.md", "README.md"],
