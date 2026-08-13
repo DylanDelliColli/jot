@@ -133,8 +133,18 @@ path into another repository is the defect `jot-met.3` retires.
 
 After migration, the equivalent repository-local command is authoritative.
 `failed` and `execution_error` block landing. A `degraded` result is allowed
-only when every finding is named in the validation ledger; never call it
-clean.
+only when every finding is accounted for — traceable to an open bead or to a
+recorded decision; never call it clean. Do not reword a bead to silence a
+finding: `reverse-citations` flags any mention of a filename, including a
+closed bead explaining why that file will never exist here, and editing the
+record to quiet the tool corrupts the record to flatter the check.
+
+Record the run on the bead you are landing, not in a table. This check is
+instant and deterministic, so current state is obtained by running it — a
+maintained copy of its output is a cache of a cheap computation, and unlike
+the tool the cache can be wrong. Expensive, non-reproducible observations
+such as a live provider capture or a concurrency pilot are the opposite
+case and do belong in a checked-in record.
 
 ## Cross-lineage review lane
 

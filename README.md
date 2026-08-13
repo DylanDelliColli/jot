@@ -52,25 +52,4 @@ consumers supply their own corpus membership and conventions.
    IDs use the `jot-` prefix.
 3. Read `docs/README.md` for the authoritative corpus map and
    `docs/history/README.md` for archived-record coordinates.
-4. Run the validation command recorded below before landing a change.
-
-## Validation ledger
-
-This table records the validation evidence for the current repository state.
-A degraded result is never described as clean; its finding classes must remain
-visible until their owning beads land.
-
-| date | scope | command | result | evidence |
-|---|---|---|---|---|
-| 2026-08-12 | repository foundation | `python3 /home/ddc/dev-environment/abacus/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json` | degraded - 2 planned-output references, 0 failed, 0 execution errors | `PROPOSAL-funnel-and-docs-doctor.md` is intentionally absent until `jot-met.2`; findings are on `jot-met` and `jot-met.2` |
-| 2026-08-12 | jot capture (`jot-met.7.1`) | `python3 tools/test_jot.py` | 22 passed, 0 failed | real git repos and real filesystem, no mocks; covers linked-worktree resolution and same-second id collision |
-| 2026-08-12 | jot capture (`jot-met.7.1`) | `python3 /home/ddc/dev-environment/abacus/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json` | degraded - same 2 planned-output references, 0 failed, 0 execution errors | adding `tools/` introduced no new findings; the two degraded rows are unchanged and still owned by `jot-met` and `jot-met.2` |
-| 2026-08-13 | stale path correction (`jot-d9m`) | `python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json` | degraded - same 2 planned-output references, 0 failed, 0 execution errors | first run from the corrected path; reproduces the 2026-08-12 baseline exactly, so the rename moved the tool without changing the result |
-| 2026-08-13 | shift-report archive transition (`jot-8ou`) | `python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json` | degraded - same 2 planned-output references, 0 failed, 0 execution errors | the report left the tree under the transition guard; recorded blob re-derived from `git show` matches `source_blob` exactly. Deleting it briefly raised a third finding, because closed bead `jot-d9m` cited the report by bare filename; rewriting that to the `path@commit` archive form the tool accepts resolved it without dropping the reference |
-| 2026-08-13 | north-star non-goals revision (`jot-gtz`) | `python3 /home/ddc/dev-environment/abacus-v1/tools/docs_doctor.py --repo /home/ddc/dev-environment/jot --json` | degraded - same 2 planned-output references, 0 failed, 0 execution errors | the revised `NORTH-STAR.md` introduces no findings of its own; an interim run showed 4 because the tracking bead quoted the unmigrated spec's filename twice, and the reverse-citations check emits one finding per occurrence - the bead was reworded, since the two standing findings owned by `jot-met` and `jot-met.2` are the intended signal that the spec has not migrated |
-
-The two 2026-08-12 rows above name `abacus/tools/docs_doctor.py`. That path no
-longer exists: the repository was renamed `abacus-v1` on 2026-08-13. Those rows
-are left as written because they record commands actually run on their stated
-date, and rewriting a command that was executed would falsify the evidence.
-Run the tool at the `abacus-v1` path until `jot-met.3` migrates it here.
+4. Run the docs-doctor command in `AGENTS.md` before landing a change.
