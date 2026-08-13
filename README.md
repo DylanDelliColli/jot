@@ -24,6 +24,11 @@ machinery remains unbuilt unless observed evidence justifies later work.
 - **docs-doctor** enforces the documentation structure a repository declares
   in `docs-corpus.json` — the enforcement is real, the declaration is the
   repository's. Landed in `jot-met.3`; `tools/docs_doctor.py` is stdlib-only.
+  The class grammar ships inside the tool and `docs-corpus.json` carries only
+  membership plus `conforms_to` (`jot-met.4`), so a consuming repository
+  declares which classes it admits and which files fill them rather than
+  copying thirty lines of grammar. A `conforms_to` the tool does not
+  implement is refused outright.
   Four checks ship: docs-structure (every file matches exactly one declared
   class), metadata (`doc-meta` blocks agree with their class), index-symmetry
   (`docs/README.md` lists exactly the managed corpus), and inflight-residency

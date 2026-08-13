@@ -118,8 +118,19 @@ overwrites it at handoff under the guard.
 Every managed document starts with `doc-meta`, appears exactly once in
 `docs/README.md`, and obeys `docs-corpus.json`. The `docs/` tree is closed:
 adding a genre, standing file, or subdirectory requires a reviewed manifest
-change. Run docs-doctor before a push, at phase gates, and at session close,
-from this repository's root:
+change.
+
+`docs-corpus.json` declares MEMBERSHIP only — which classes this repository
+admits, which files fill them, and `conforms_to`, naming the class-library
+version it was written against. The classes themselves ship inside
+`tools/docs_doctor.py` and are the maximum a repository may declare, never a
+structure it must adopt: reducing the corpus means removing names from
+`classes`, and a repository that stops declaring a class stops admitting that
+genre. Do not put a class definition back into `docs-corpus.json`; the
+membership validator rejects keys no consumer reads.
+
+Run docs-doctor before a push, at phase gates, and at session close, from
+this repository's root:
 
 ```sh
 python3 tools/docs_doctor.py --repo . --json

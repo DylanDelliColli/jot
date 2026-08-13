@@ -5,6 +5,16 @@ A repository declares its corpus in `docs-corpus.json`; this tool enforces
 that declaration against the working tree. It does not impose a canonical
 structure — the enforcement is real, the declaration is the repository's.
 
+The declaration comes in two halves. The CLASS LIBRARY ships with the tool
+(`CLASS_LIBRARY`, versioned by `CLASS_LIBRARY_VERSION`) and defines the
+document classes and the frozen discovery semantics. `docs-corpus.json`
+declares only MEMBERSHIP: which of those classes this repository admits,
+which files fill them, and `conforms_to`, naming the library version it was
+written against. A `conforms_to` this tool does not implement is refused as
+`execution_error` before anything else is read — the file's meaning depends
+on the library it was written for. The library is the maximum a repository
+may declare; reducing it is removing names from `classes`.
+
 Four checks ship here:
 
   docs-structure    every file under docs/ matches exactly one declared
@@ -47,6 +57,58 @@ import sys
 from pathlib import PurePath
 
 HEX40_RE = re.compile(r"[0-9a-f]{40}\Z")
+
+NUMBERED = r"^(?P<number>[0-9]{4})-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md$"
+DATED = (r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})"
+         r"-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
+
+# The class library ships WITH the tool, as a constant rather than a sibling
+# data file: docs_doctor.py is installed by symlinking it onto PATH, and a
+# sibling file does not follow the symlink. Being code, the library also
+# cannot skew from the implementation that reads it.
+#
+# It is the MAXIMUM a repository may declare, never a structure it must
+# adopt. A repository reduces it by listing fewer names in `classes`; the
+# `standing` class's file list is per-repo membership because its members
+# are documents, not a genre.
+CLASS_LIBRARY_VERSION = "1"
+CLASS_LIBRARY = {
+    "classes": [
+        {"name": "prd", "dir": "docs/prd", "basename_regex": NUMBERED,
+         "unique_by": "number", "role": "contract"},
+        {"name": "adr", "dir": "docs/adr", "basename_regex": NUMBERED,
+         "unique_by": "number", "role": "contract"},
+        {"name": "evidence", "dir": "docs/compatibility",
+         "basename_regex": DATED, "calendar_date_group": "date",
+         "role": "evidence"},
+        {"name": "evidence-index", "file": "docs/compatibility/README.md",
+         "indexes_class": "evidence"},
+        {"name": "corpus-index", "file": "docs/README.md"},
+        {"name": "architecture", "file": "docs/architecture.md",
+         "role": "contract"},
+        {"name": "archive-index", "file": "docs/history/README.md",
+         "exactly_one_file_in_dir": True},
+        {"name": "standing", "files": []},   # members come from membership
+    ],
+    "discovery": {
+        "docs": "filesystem walk of docs/, no ignore filtering",
+        "root_and_modules":
+            "git ls-files --cached --others --exclude-standard -z"},
+    "regex_semantics": "python re.fullmatch over the basename, "
+                       "after the class directory matches exactly",
+    "glob_semantics": "python pathlib PurePath.full_match; "
+                      "** crosses separators",
+}
+STANDING_CLASS = "standing"
+
+# Exactly the keys a repository declares. inflight_globs is membership, not
+# library: it names which working-record genres live at THIS repository's
+# root, and live consumers already disagree about them.
+MEMBERSHIP_KEYS = {"conforms_to", "classes", "standing_files",
+                   "managed_globs", "managed_files", "alias_symlinks",
+                   "historical_files", "inflight_globs",
+                   "protected_mainline_ref"}
+
 ROLES = ("contract", "evidence", "working")
 LIFECYCLES = ("active", "partially-superseded", "superseded", "withdrawn",
               "parked", "historical")
@@ -269,10 +331,18 @@ class Doctor:
         return self._stat_state(rel) == "regular"
 
     # -- manifest -----------------------------------------------------------
+    def _fail_manifest(self, errs):
+        for e in errs[:20]:
+            self.find("execution", "docs-corpus.json", "-",
+                      "execution_error", f"manifest invalid: {e}")
+        return False
+
     def load_manifest(self):
-        """Fail-closed manifest gate: the complete schema is validated
-        before any consumer runs; one structured execution_error per
-        violation, never a traceback or a silent policy change."""
+        """Fail-closed manifest gate: membership is validated, the declared
+        classes are resolved against the shipped library, and the composed
+        manifest is validated again before any consumer runs. One structured
+        execution_error per violation, never a traceback or a silent policy
+        change."""
         path = os.path.join(self.repo, "docs-corpus.json")
         if not os.path.isfile(path):
             self.find("execution", "docs-corpus.json", "-", "execution_error",
@@ -280,11 +350,26 @@ class Doctor:
             return False
         try:
             with open(path, encoding="utf-8") as fh:
-                mf = json.load(fh)
+                mem = json.load(fh)
         except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
             self.find("execution", "docs-corpus.json", "-", "execution_error",
                       f"manifest unreadable or unparseable: {exc}")
             return False
+        # the version gate comes first and alone: everything below reads the
+        # file under a contract it may not have been written against, so a
+        # version this tool does not implement must not be interpreted
+        if not isinstance(mem, dict):
+            return self._fail_manifest(["top level must be an object"])
+        conforms = mem.get("conforms_to")
+        if conforms != CLASS_LIBRARY_VERSION:
+            return self._fail_manifest([
+                f"conforms_to {conforms!r} is not implemented by this "
+                f"docs-doctor, which ships class library version "
+                f"{CLASS_LIBRARY_VERSION!r}"])
+        errs = self._validate_membership(mem)
+        if errs:
+            return self._fail_manifest(errs)
+        mf = self._compose(mem)
         errs = self._validate_manifest(mf)
         ref = mf.get("protected_mainline_ref")
         if isinstance(ref, str) and ref.startswith("refs/"):
@@ -299,13 +384,76 @@ class Doctor:
                             "ref name (git check-ref-format); revision "
                             "expressions are not roots")
         if errs:
-            for e in errs[:20]:
-                self.find("execution", "docs-corpus.json", "-",
-                          "execution_error", f"manifest invalid: {e}")
-            return False
+            return self._fail_manifest(errs)
         self.manifest = mf
         return True
 
+    @staticmethod
+    def _validate_membership(mem):
+        """Exact-key gate for the per-repo half. The composed manifest is
+        validated separately; this keeps the fail-closed property from
+        leaking away in the split — a membership file that declares
+        something no consumer reads is an error, not a no-op."""
+        errs = []
+        for key in sorted(set(mem) - MEMBERSHIP_KEYS):
+            errs.append(f"unknown key: {key}")
+        for key in sorted(MEMBERSHIP_KEYS - set(mem)):
+            errs.append(f"missing key: {key}")
+        for key in ("managed_globs", "managed_files", "alias_symlinks",
+                    "historical_files", "inflight_globs", "standing_files"):
+            v = mem.get(key)
+            if key in mem and (not isinstance(v, list)
+                               or not all(repo_relative(s) for s in v)):
+                errs.append(f"{key} must be a list of repo-relative paths")
+        known = [c["name"] for c in CLASS_LIBRARY["classes"]]
+        declared = mem.get("classes")
+        if not isinstance(declared, list) or not declared \
+                or not all(isinstance(n, str) for n in declared):
+            errs.append("classes must be a nonempty list of class names "
+                        f"from the shipped library: {', '.join(known)}")
+        else:
+            for n in declared:
+                if n not in known:
+                    errs.append(f"classes names {n!r}, which the shipped "
+                                f"library does not define; available: "
+                                f"{', '.join(known)}")
+            for n in sorted({n for n in declared if declared.count(n) > 1}):
+                errs.append(f"classes lists {n!r} more than once")
+            standing = mem.get("standing_files")
+            if isinstance(standing, list) and standing \
+                    and STANDING_CLASS not in declared:
+                errs.append(f"standing_files is non-empty but the "
+                            f"{STANDING_CLASS!r} class is not declared, so "
+                            "nothing would classify those documents")
+        return errs
+
+    @staticmethod
+    def _compose(mem):
+        """Membership plus the shipped library, in the single shape every
+        check already consumes. Composition is the ONLY thing the split
+        changes: no check learns that its manifest arrived in two halves."""
+        classes = []
+        for spec in CLASS_LIBRARY["classes"]:
+            if spec["name"] not in mem["classes"]:
+                continue
+            spec = dict(spec)
+            if spec["name"] == STANDING_CLASS:
+                spec["files"] = list(mem["standing_files"])
+            classes.append(spec)
+        return {"docs_classes": classes,
+                "managed_globs": list(mem["managed_globs"]),
+                "managed_files": list(mem["managed_files"]),
+                "alias_symlinks": list(mem["alias_symlinks"]),
+                "historical_files": list(mem["historical_files"]),
+                "inflight_globs": list(mem["inflight_globs"]),
+                "protected_mainline_ref": mem["protected_mainline_ref"],
+                "discovery": CLASS_LIBRARY["discovery"],
+                "regex_semantics": CLASS_LIBRARY["regex_semantics"],
+                "glob_semantics": CLASS_LIBRARY["glob_semantics"]}
+
+    # The COMPOSED shape every check consumes — no longer a file schema.
+    # _validate_manifest runs over the composition, so it now doubles as the
+    # guard on the shipped library and on _compose itself.
     TOP_KEYS = {"docs_classes", "managed_globs", "managed_files",
                 "alias_symlinks", "historical_files", "inflight_globs",
                 "protected_mainline_ref", "discovery", "regex_semantics",
@@ -315,8 +463,12 @@ class Doctor:
                   "file": {"name", "file", "role", "indexes_class",
                            "exactly_one_file_in_dir"},
                   "files": {"name", "files", "role"}}
-    # the implementation hardcodes these semantics; a manifest declaring
-    # anything else would silently lie about what runs
+    # The implementation hardcodes these semantics. The check used to guard
+    # against a per-repo COPY of the manifest lying about them; with the
+    # library shipped alongside the code that failure mode is gone, and what
+    # remains is an author editing the library's self-description without
+    # changing the behaviour it describes. Still a real way to ship a
+    # manifest that lies about what runs, so the assertion stays.
     FROZEN_LITERALS = {
         ("discovery", "docs"): "filesystem walk of docs/, no ignore filtering",
         ("discovery", "root_and_modules"):

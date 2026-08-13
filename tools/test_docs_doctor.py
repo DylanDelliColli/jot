@@ -7,12 +7,13 @@ Builds one hermetic baseline corpus in a temp git repo (which must run
 clean), then applies one mutation per case and asserts finding kind,
 aggregate, and exit mapping.
 
-The fixture manifest is defined HERE, not copied from this repository's
-docs-corpus.json. The tool is the product and its fixtures are
-consumer-neutral: a suite that borrows the host repository's membership
-would drift with it and would leave the manifest features this repository
-happens not to use — module globs, historical files, a second dir class —
-untested.
+The fixture MEMBERSHIP is defined HERE, not copied from this repository's
+docs-corpus.json: a suite that borrowed the host's membership would drift
+with it and would leave the features this repository happens not to use —
+module globs, historical files, standing documents — untested. The CLASSES
+come from the shipped library, because after the class-library split the
+grammar is part of the product rather than part of a consumer, and the
+fixture should exercise what actually ships.
 
 Scope note: this suite covers the four checks jot carries (docs-structure,
 metadata, index-symmetry, inflight-residency) and the manifest gate,
@@ -29,6 +30,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tools import docs_doctor  # noqa: E402
 from tools.docs_doctor import Doctor  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -83,41 +85,17 @@ def replace(root, rel, old, new):
 
 
 # ---------------------------------------------------------------- baseline --
-NUMBERED = (r"^(?P<number>[0-9]{4})-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
-DATED = (r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})"
-         r"-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md$")
-
-FIXTURE_MANIFEST = {
-    "docs_classes": [
-        {"name": "adr", "dir": "docs/adr", "basename_regex": NUMBERED,
-         "unique_by": "number", "role": "contract"},
-        {"name": "prd", "dir": "docs/prd", "basename_regex": NUMBERED,
-         "unique_by": "number", "role": "contract"},
-        {"name": "record", "dir": "docs/records", "basename_regex": DATED,
-         "calendar_date_group": "date", "role": "evidence"},
-        {"name": "record-index", "file": "docs/records/README.md",
-         "indexes_class": "record"},
-        {"name": "corpus-index", "file": "docs/README.md"},
-        {"name": "architecture", "file": "docs/architecture.md",
-         "role": "contract"},
-        {"name": "archive-index", "file": "docs/history/README.md",
-         "exactly_one_file_in_dir": True},
-        {"name": "standing", "files": ["docs/migration.md", "docs/notes.md"]},
-    ],
+FIXTURE_MEMBERSHIP = {
+    "conforms_to": docs_doctor.CLASS_LIBRARY_VERSION,
+    "classes": ["prd", "adr", "evidence", "evidence-index", "corpus-index",
+                "architecture", "archive-index", "standing"],
+    "standing_files": ["docs/migration.md", "docs/notes.md"],
     "managed_globs": ["mod-*/README.md"],
     "managed_files": ["AGENTS.md", "CONTEXT.md", "README.md"],
     "alias_symlinks": ["CLAUDE.md"],
     "historical_files": ["NOTES.md"],
     "inflight_globs": ["PROPOSAL-*.md", "SHIFT-REPORT-*.md"],
     "protected_mainline_ref": "refs/heads/main",
-    "discovery": {
-        "docs": "filesystem walk of docs/, no ignore filtering",
-        "root_and_modules":
-            "git ls-files --cached --others --exclude-standard -z"},
-    "regex_semantics": "python re.fullmatch over the basename, "
-                       "after the class directory matches exactly",
-    "glob_semantics": "python pathlib PurePath.full_match; "
-                      "** crosses separators",
 }
 
 CORPUS = {
@@ -127,10 +105,10 @@ CORPUS = {
     "docs/adr/0002-second-decision.md":
         dict(role="contract", lifecycle="active",
              body="# Second\n\nAnother decision.\n"),
-    "docs/records/2026-01-02-sample-record.md":
+    "docs/compatibility/2026-01-02-sample-record.md":
         dict(role="evidence", lifecycle="active",
              body="# Record\n\nObserved things.\n"),
-    "docs/records/README.md":
+    "docs/compatibility/README.md":
         dict(role="working", lifecycle="active",
              body="# Records\n\n- [`2026-01-02-sample-record.md`]"
                   "(2026-01-02-sample-record.md)\n"),
@@ -197,7 +175,7 @@ def build_baseline(root):
     render(root, CORPUS)
     with open(os.path.join(root, "NOTES.md"), "wb") as fh:
         fh.write(NOTES_BYTES)
-    write(root, "docs-corpus.json", json.dumps(FIXTURE_MANIFEST, indent=1))
+    write(root, "docs-corpus.json", json.dumps(FIXTURE_MEMBERSHIP, indent=1))
     os.symlink("AGENTS.md", os.path.join(root, "CLAUDE.md"))
     write(root, "PROPOSAL-sample.md", "# Working proposal\n")
     write(root, "SHIFT-REPORT-2026-01-01-CLAUDE.md", "# Handoff\n")
@@ -272,8 +250,28 @@ def mutate_manifest(root, fn):
     write(root, "docs-corpus.json", json.dumps(mf))
 
 
-def class_named(mf, name):
-    return next(c for c in mf["docs_classes"] if c["name"] == name)
+def with_library(fn):
+    """Run the doctor against a mutated copy of the SHIPPED class library.
+
+    The library is code, not a per-repo file, so the only way to author a
+    bad one is to edit the constant. These cases prove the composed-manifest
+    validator still fails closed on a library the tool ships itself — the
+    failure mode the old per-repo frozen-literal check used to cover."""
+    original = docs_doctor.CLASS_LIBRARY
+    mutated = json.loads(json.dumps(original))
+    fn(mutated)
+
+    def run(root):
+        docs_doctor.CLASS_LIBRARY = mutated
+        try:
+            return run_doctor(root)
+        finally:
+            docs_doctor.CLASS_LIBRARY = original
+    return run
+
+
+def library_class(lib, name):
+    return next(c for c in lib["classes"] if c["name"] == name)
 
 
 def rewrite(root, sup=None, corpus_mut=None):
@@ -390,7 +388,7 @@ def _(root):
 
 @case("invalid_calendar_date")
 def _(root):
-    write(root, "docs/records/2026-99-99-impossible.md", meta_block(
+    write(root, "docs/compatibility/2026-99-99-impossible.md", meta_block(
         {"role": "evidence", "lifecycle": "active"}) + "\n# X\n")
     expect("invalid_calendar_date", run_doctor(root), "failed",
            "invalid calendar date")
@@ -1045,19 +1043,42 @@ def _(root):
            "manifest missing")
 
 
-@case("manifest_missing_docs_classes")
+@case("manifest_missing_classes_key")
 def _(root):
-    mutate_manifest(root, lambda mf: mf.pop("docs_classes"))
-    expect("manifest_missing_docs_classes", run_doctor(root),
-           "execution_error", "docs_classes must be a nonempty list")
+    mutate_manifest(root, lambda mf: mf.pop("classes"))
+    expect("manifest_missing_classes_key", run_doctor(root),
+           "execution_error", "missing key: classes")
 
 
-@case("manifest_bad_regex")
+@case("manifest_empty_classes_list")
 def _(root):
-    mutate_manifest(root, lambda mf: class_named(mf, "adr").update(
-        basename_regex="(unclosed"))
-    expect("manifest_bad_regex", run_doctor(root),
-           "execution_error", "basename_regex invalid")
+    mutate_manifest(root, lambda mf: mf.update(classes=[]))
+    expect("manifest_empty_classes_list", run_doctor(root),
+           "execution_error", "classes must be a nonempty list")
+
+
+@case("manifest_unknown_class_name")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.update(
+        classes=mf["classes"] + ["runbook"]))
+    expect("manifest_unknown_class_name", run_doctor(root),
+           "execution_error", "the shipped library does not define")
+
+
+@case("manifest_duplicate_class_name")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.update(
+        classes=mf["classes"] + ["adr"]))
+    expect("manifest_duplicate_class_name", run_doctor(root),
+           "execution_error", "more than once")
+
+
+@case("manifest_standing_files_without_class")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.update(
+        classes=[c for c in mf["classes"] if c != "standing"]))
+    expect("manifest_standing_files_without_class", run_doctor(root),
+           "execution_error", "nothing would classify those documents")
 
 
 @case("manifest_unknown_key")
@@ -1067,19 +1088,68 @@ def _(root):
            "unknown key: surprise")
 
 
-@case("manifest_wrong_frozen_literal")
+@case("manifest_inline_class_grammar_rejected")
 def _(root):
-    mutate_manifest(root, lambda mf: mf["discovery"].update(
+    # the grammar ships with the tool; a repo that tries to redeclare it is
+    # writing something no consumer reads
+    mutate_manifest(root, lambda mf: mf.update(docs_classes=[]))
+    expect("manifest_inline_class_grammar_rejected", run_doctor(root),
+           "execution_error", "unknown key: docs_classes")
+
+
+@case("library_bad_regex")
+def _(root):
+    run = with_library(lambda lib: library_class(lib, "adr").update(
+        basename_regex="(unclosed"))
+    expect("library_bad_regex", run(root), "execution_error",
+           "basename_regex invalid")
+
+
+@case("library_unique_by_wrong_type")
+def _(root):
+    run = with_library(lambda lib: library_class(lib, "adr").update(
+        unique_by=[]))
+    expect("library_unique_by_wrong_type", run(root), "execution_error",
+           "must name a capture group")
+
+
+@case("library_option_misapplied")
+def _(root):
+    run = with_library(lambda lib: library_class(lib, "adr").update(
+        exactly_one_file_in_dir=True))
+    expect("library_option_misapplied", run(root), "execution_error",
+           "not applicable to a dir class")
+
+
+@case("library_indexes_class_on_dir")
+def _(root):
+    run = with_library(lambda lib: library_class(lib, "adr").update(
+        indexes_class="evidence"))
+    expect("library_indexes_class_on_dir", run(root), "execution_error",
+           "not applicable to a dir class")
+
+
+@case("library_indexes_class_wrong_type")
+def _(root):
+    run = with_library(lambda lib: library_class(lib, "evidence-index").update(
+        indexes_class=[]))
+    expect("library_indexes_class_wrong_type", run(root), "execution_error",
+           "must name a dir class")
+
+
+@case("library_wrong_frozen_literal")
+def _(root):
+    run = with_library(lambda lib: lib["discovery"].update(
         docs="honor git ignores"))
-    expect("manifest_wrong_frozen_literal", run_doctor(root),
+    expect("library_wrong_frozen_literal", run(root),
            "execution_error", "must be the frozen literal")
 
 
-@case("manifest_unknown_nested_discovery_key")
+@case("library_unknown_nested_discovery_key")
 def _(root):
-    mutate_manifest(root, lambda mf: mf["discovery"].update(
+    run = with_library(lambda lib: lib["discovery"].update(
         archive="scan some other source"))
-    expect("manifest_unknown_nested_discovery_key", run_doctor(root),
+    expect("library_unknown_nested_discovery_key", run(root),
            "execution_error", "exactly docs and root_and_modules")
 
 
@@ -1131,38 +1201,6 @@ def _(root):
            "NOTES.md in both managed_files and historical_files")
 
 
-@case("manifest_unique_by_wrong_type")
-def _(root):
-    mutate_manifest(root, lambda mf: class_named(mf, "adr").update(
-        unique_by=[]))
-    expect("manifest_unique_by_wrong_type", run_doctor(root),
-           "execution_error", "must name a capture group")
-
-
-@case("manifest_option_misapplied")
-def _(root):
-    mutate_manifest(root, lambda mf: class_named(mf, "adr").update(
-        exactly_one_file_in_dir=True))
-    expect("manifest_option_misapplied", run_doctor(root),
-           "execution_error", "not applicable to a dir class")
-
-
-@case("manifest_indexes_class_on_dir")
-def _(root):
-    mutate_manifest(root, lambda mf: class_named(mf, "adr").update(
-        indexes_class="record"))
-    expect("manifest_indexes_class_on_dir", run_doctor(root),
-           "execution_error", "not applicable to a dir class")
-
-
-@case("manifest_indexes_class_wrong_type")
-def _(root):
-    mutate_manifest(root, lambda mf: class_named(mf, "record-index").update(
-        indexes_class=[]))
-    expect("manifest_indexes_class_wrong_type", run_doctor(root),
-           "execution_error", "must name a dir class")
-
-
 @case("manifest_file_class_path_claimed")
 def _(root):
     mutate_manifest(root, lambda mf: mf.update(
@@ -1175,7 +1213,7 @@ def _(root):
 def _(root):
     mutate_manifest(root, lambda mf: mf.pop("protected_mainline_ref"))
     expect("manifest_missing_protected_ref_field", run_doctor(root),
-           "execution_error", "exact full ref")
+           "execution_error", "missing key: protected_mainline_ref")
 
 
 @case("manifest_head_as_protected_ref_rejected")
@@ -1198,6 +1236,99 @@ def _(root):
         protected_mainline_ref="refs/heads/main~1"))
     expect("manifest_revision_expression_ref", run_doctor(root),
            "execution_error", "not a valid full ref name")
+
+
+# ------------------------------------------------------- conforms_to gate --
+@case("conforms_to_unknown_version_refused")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.update(conforms_to="99"))
+    expect_findings("conforms_to_unknown_version_refused", run_doctor(root),
+                    "execution_error",
+                    [("execution_error", "is not implemented by this "
+                                         "docs-doctor", 1)])
+
+
+@case("conforms_to_missing_refused")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.pop("conforms_to"))
+    expect("conforms_to_missing_refused", run_doctor(root),
+           "execution_error", "is not implemented by this docs-doctor")
+
+
+@case("conforms_to_wrong_type_refused")
+def _(root):
+    mutate_manifest(root, lambda mf: mf.update(conforms_to=1))
+    expect("conforms_to_wrong_type_refused", run_doctor(root),
+           "execution_error", "is not implemented by this docs-doctor")
+
+
+@case("conforms_to_refusal_precedes_every_other_reading")
+def _(root):
+    """A file written for another library version must not be interpreted
+    under this one, so the version refusal is the ONLY finding — even when
+    the file is also full of errors this tool would otherwise report."""
+    def fn(mf):
+        mf["conforms_to"] = "99"
+        mf["surprise"] = 1
+        mf.pop("managed_files")
+        mf["classes"] = ["runbook"]
+    mutate_manifest(root, fn)
+    r = run_doctor(root)
+    expect_findings("conforms_to_refusal_precedes_every_other_reading", r,
+                    "execution_error",
+                    [("execution_error", "is not implemented by this "
+                                         "docs-doctor", 1)],
+                    absent=("unknown key: surprise",
+                            "missing key: managed_files",
+                            "the shipped library does not define"))
+
+
+# ---------------------------------------------------- membership reduction --
+@case("reducing_classes_closes_the_genre")
+def _(root):
+    """The shipped library is the maximum, not a structure to adopt: a repo
+    that stops declaring a class stops admitting that genre."""
+    clean = run_doctor(root)
+    mutate_manifest(root, lambda mf: mf.update(
+        classes=[c for c in mf["classes"] if c not in ("prd", "adr")]))
+    reduced = run_doctor(root)
+    check("reducing_classes_closes_the_genre",
+          clean["aggregate"] == "clean"
+          and reduced["aggregate"] == "failed"
+          and all(f["reason"] in ("matches no class",
+                                  "unknown subdirectory under docs/")
+                  for f in reduced["findings"]
+                  if f["check"] == "docs-structure"),
+          f"clean={clean['aggregate']} reduced={reduced['aggregate']} "
+          f"{json.dumps(reduced['findings'])[:300]}")
+
+
+@case("standing_files_are_membership_not_library")
+def _(root):
+    """The standing class ships empty; its members come from the repo."""
+    mutate_manifest(root, lambda mf: mf.update(
+        standing_files=[p for p in mf["standing_files"]
+                        if p != "docs/notes.md"]))
+    expect("standing_files_are_membership_not_library", run_doctor(root),
+           "failed", "matches no class")
+
+
+@case("inflight_globs_stay_per_repo")
+def _(root):
+    """Live consumers disagree about root working-record genres, so this
+    stayed in membership; a repo that declares one gets it honoured."""
+    write(root, "SKILL-REVIEW-topic.md", "# review\n")
+    unadmitted = run_doctor(root)
+    mutate_manifest(root, lambda mf: mf.update(
+        inflight_globs=mf["inflight_globs"] + ["SKILL-REVIEW-*.md"]))
+    admitted = run_doctor(root)
+    check("inflight_globs_stay_per_repo",
+          unadmitted["aggregate"] == "failed"
+          and any("matches no root class" in f["reason"]
+                  for f in unadmitted["findings"])
+          and admitted["aggregate"] == "clean",
+          f"unadmitted={unadmitted['aggregate']} "
+          f"admitted={admitted['aggregate']}")
 
 
 @case("manifest_legal_at_sign_ref_accepted")
