@@ -29,9 +29,13 @@ nothing was archived under the transition guard to create it.
 - **Corpus membership:** `docs-corpus.json`; the map is `docs/README.md`.
 - **Validation evidence:** the ledger table in `README.md`.
 - **Design of record, explicitly NOT a build order:**
-  `PROPOSAL-funnel-and-docs-doctor.md`. It lives in the abacus checkout and has
-  not been migrated (`jot-met.2`). Its absence here is intentional and is the
-  source of the two standing docs-doctor findings.
+  `PROPOSAL-funnel-and-docs-doctor.md`. It lives in the `abacus-v1` checkout —
+  corrected from "abacus" after the rename; verified present only there — and
+  has not been migrated (`jot-met.2`). Its absence here is intentional and is
+  the source of the two standing docs-doctor findings. `NORTH-STAR.md`
+  non-goal 6 now names that spec's durability machinery explicitly, so a
+  `jot-met.2` import must argue past the non-goal rather than arrive by
+  default.
 
 **No authority inversion is active.** Code, tracker, and documentation are
 believed to agree. Any disagreement found is a defect to investigate, not
