@@ -94,8 +94,8 @@ br create --title "<title>" --type <type> --priority <n> \
           --description "<text>"
 ```
 
-`br create` is the one tracker operation Jot wraps and is pinned in
-`docs/compatibility/2026-08-13-br-pin.md`. If `br` is missing or fails, stop
+`br create` is the one tracker operation Jot wraps, pinned in the jot
+repository's `docs/compatibility/` records. If `br` is missing or fails, stop
 and tell the operator — do not fall back to writing the bead somewhere else.
 
 **Do not carry the note id onto the bead.** It is tempting — `br create`
@@ -109,8 +109,11 @@ a note can be thrown away the moment its bead exists.
 **DOC** — apply the edit, then **run docs-doctor and report the result**:
 
 ```bash
-python3 tools/docs_doctor.py --repo . --json
+docs-doctor --repo . --json
 ```
+
+If the repository has no `docs-corpus.json`, docs-doctor is not set up there —
+say so rather than running `--init` as a side effect of curating a note.
 
 A documentation change that has not been checked is not finished. `failed` or
 `execution_error` must be resolved before the pass ends; `degraded` is
