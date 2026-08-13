@@ -28,7 +28,7 @@ machinery remains unbuilt unless observed evidence justifies later work.
 
   Four checks ship: docs-structure (every file matches exactly one declared
   class), metadata (`doc-meta` blocks agree with their class), index-symmetry
-  (`docs/README.md` lists exactly the managed corpus), and inflight-residency
+  (`docs/INDEX.md` lists exactly the managed corpus), and inflight-residency
   (one review file per cycle, one shift report per lane). Seven further
   checks — supersession, probes, bead-citations, historical-bytes,
   archive-index, reverse-citations, evidence-index — and the probe executor
@@ -79,10 +79,10 @@ one per line:
    "docs/adr",
    "docs/prd",
    "docs/compatibility",
-   "docs/compatibility/README.md",
-   "docs/README.md",
+   "docs/compatibility/INDEX.md",
+   "docs/INDEX.md",
    "docs/architecture.md",
-   "docs/history/README.md"
+   "docs/history/INDEX.md"
  ],
 ```
 
@@ -90,14 +90,14 @@ one per line:
 location you do not list is *forbidden*, not merely unchecked — documents
 there are reported as unknown, which is what makes adding a genre later a
 deliberate edit rather than a drift. Step 1 also refuses to overwrite an
-existing `docs-corpus.json` without `--force`, and scaffolds `docs/README.md`
+existing `docs-corpus.json` without `--force`, and scaffolds `docs/INDEX.md`
 when absent, with a row per document it found and a `TODO` claim in each.
 
 Documents that belong under `docs/` but fit none of those locations go in
 `standing_files`, listed individually.
 
 **Step 2** reports what remains, and it is normally two things: each document
-needs a `doc-meta` block, and each row of `docs/README.md` needs a real claim
+needs a `doc-meta` block, and each row of `docs/INDEX.md` needs a real claim
 in place of the `TODO`. A document's block looks like this, before any other
 content in the file:
 
@@ -136,6 +136,6 @@ only when every finding is accounted for, and is never reported as clean.
 1. Read `AGENTS.md`; `CLAUDE.md` resolves to the same contract.
 2. Run `br ready`, then `br show <id>` and claim only ready work. Jot tracker
    IDs use the `jot-` prefix.
-3. Read `docs/README.md` for the authoritative corpus map and
-   `docs/history/README.md` for archived-record coordinates.
+3. Read `docs/INDEX.md` for the authoritative corpus map and
+   `docs/history/INDEX.md` for archived-record coordinates.
 4. Run the docs-doctor command in `AGENTS.md` before landing a change.

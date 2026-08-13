@@ -1,12 +1,12 @@
-{"conforms_to": "2",
+{"conforms_to": "3",
  "classes": [
    "docs/adr",
    "docs/prd",
    "docs/compatibility",
-   "docs/compatibility/README.md",
-   "docs/README.md",
+   "docs/compatibility/INDEX.md",
+   "docs/INDEX.md",
    "docs/architecture.md",
-   "docs/history/README.md"
+   "docs/history/INDEX.md"
  ],
  "standing_files": [],
  "managed_globs": [],

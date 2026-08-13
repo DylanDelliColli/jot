@@ -99,7 +99,7 @@ document or working record:
 2. Commit the completed record first, so the exact bytes exist in a commit.
 3. Record the full last-containing commit and its exact blob ID.
 4. Only in a later commit, overwrite or delete the path and add its pointer row
-   to `docs/history/README.md`.
+   to `docs/history/INDEX.md`.
 5. Verify the recorded commit is reachable from the protected mainline
    `refs/heads/main`. Never rewrite an archive-bearing mainline commit.
 
@@ -116,7 +116,7 @@ Each lane likewise keeps at most one current root-level shift report and
 overwrites it at handoff under the guard.
 
 Every managed document starts with `doc-meta`, appears exactly once in
-`docs/README.md`, and obeys `docs-corpus.json`. The `docs/` tree is closed:
+`docs/INDEX.md`, and obeys `docs-corpus.json`. The `docs/` tree is closed:
 adding a genre, standing file, or subdirectory requires a reviewed manifest
 change.
 

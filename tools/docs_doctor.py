@@ -22,7 +22,7 @@ Four checks ship here:
                     no corpus path escapes the repository via a symlink
   metadata          every managed document carries a well-formed doc-meta
                     block whose role agrees with the class it belongs to
-  index-symmetry    docs/README.md lists exactly the managed corpus, with
+  index-symmetry    docs/INDEX.md lists exactly the managed corpus, with
                     well-formed managed, historical, and alias rows
                     (the index/doc-meta agreement pass reports here too)
   inflight-residency  one review file per cycle, one shift report per lane
@@ -73,9 +73,12 @@ DATED = (r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})"
 # describe its past and leave a new one unable to write its first document.
 #
 # Version 2 renamed every class to the location it admits, so the `classes`
-# array reads as the whitelist it is without a second command. Version 1's
-# opaque names (adr, evidence, corpus-index) are refused by the version gate.
-CLASS_LIBRARY_VERSION = "2"
+# array reads as the whitelist it is without a second command. Version 3
+# moved the corpus index to docs/INDEX.md, because a repository already has
+# a governed README.md at its root and one named docs/INDEX.md could not be
+# told apart from it in a finding, a row, or a sentence. Older versions are
+# refused by the version gate.
+CLASS_LIBRARY_VERSION = "3"
 CLASS_LIBRARY = {
     "classes": [
         {"name": "docs/adr", "dir": "docs/adr", "basename_regex": NUMBERED,
@@ -91,17 +94,17 @@ CLASS_LIBRARY = {
          "role": "evidence",
          "summary": "dated observation records, "
                     "docs/compatibility/2026-08-13-some-slug.md"},
-        {"name": "docs/compatibility/README.md",
-         "file": "docs/compatibility/README.md",
+        {"name": "docs/compatibility/INDEX.md",
+         "file": "docs/compatibility/INDEX.md",
          "indexes_class": "docs/compatibility",
          "summary": "index of the dated observation records"},
-        {"name": "docs/README.md", "file": "docs/README.md",
+        {"name": "docs/INDEX.md", "file": "docs/INDEX.md",
          "summary": "the corpus map; every managed document needs a row "
                     "here. Removing this line is not advised"},
         {"name": "docs/architecture.md", "file": "docs/architecture.md",
          "role": "contract",
          "summary": "one standing architecture contract"},
-        {"name": "docs/history/README.md", "file": "docs/history/README.md",
+        {"name": "docs/history/INDEX.md", "file": "docs/history/INDEX.md",
          "exactly_one_file_in_dir": True,
          "summary": "archive pointer index, and the only file "
                     "docs/history/ may hold"},
@@ -123,7 +126,7 @@ STANDING_CLASS = "standing_files"
 # The corpus index is both a class name and the path it admits, since a
 # class IS its location from version 2 on. Named once so a rename cannot
 # leave a stale literal behind.
-CORPUS_INDEX = "docs/README.md"
+CORPUS_INDEX = "docs/INDEX.md"
 
 # Exactly the keys a repository declares. inflight_globs is membership, not
 # library: it names which working-record genres live at THIS repository's
@@ -877,7 +880,7 @@ class Doctor:
             for path in self.managed:
                 if path != rel:
                     self.find("index-symmetry", path, "-", "failed",
-                              "corpus index docs/README.md absent")
+                              "corpus index docs/INDEX.md absent")
             return
         index_text = self._read(rel)
         if index_text is None:
@@ -1114,7 +1117,7 @@ def derive_membership(repo):
     if os.path.isdir(docs_dir):
         claimed = {c.get("file") for c in CLASS_LIBRARY["classes"]}
         # a directory is claimed by a file class too — docs/history/ holds
-        # only docs/history/README.md, and classify_docs knows that
+        # only docs/history/INDEX.md, and classify_docs knows that
         claimed_dirs = {c["dir"] for c in CLASS_LIBRARY["classes"]
                         if "dir" in c}
         claimed_dirs |= {os.path.dirname(f) for f in claimed if f}
@@ -1176,7 +1179,7 @@ def render_membership(mem):
 
 
 def scaffold_corpus_index(repo, mem):
-    """A starter docs/README.md listing what init found.
+    """A starter docs/INDEX.md listing what init found.
 
     Without it the first run after setup reports every managed document as
     'corpus index absent', which is a wall rather than a next step. Rows
@@ -1260,7 +1263,7 @@ def cmd_init(repo, force):
           "that fit no\nlocation go in \"standing_files\" instead.\n")
     print("Next: run the check. Remaining findings are yours to act on —\n"
           "typically a doc-meta block per document and a real claim for\n"
-          "each row of docs/README.md.")
+          "each row of docs/INDEX.md.")
     return 0
 
 

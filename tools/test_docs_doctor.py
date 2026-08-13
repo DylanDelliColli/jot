@@ -90,8 +90,8 @@ def replace(root, rel, old, new):
 FIXTURE_MEMBERSHIP = {
     "conforms_to": docs_doctor.CLASS_LIBRARY_VERSION,
     "classes": ["docs/adr", "docs/prd", "docs/compatibility",
-                "docs/compatibility/README.md", "docs/README.md",
-                "docs/architecture.md", "docs/history/README.md"],
+                "docs/compatibility/INDEX.md", "docs/INDEX.md",
+                "docs/architecture.md", "docs/history/INDEX.md"],
     "standing_files": ["docs/migration.md", "docs/notes.md"],
     "managed_globs": ["mod-*/README.md"],
     "managed_files": ["AGENTS.md", "CONTEXT.md", "README.md"],
@@ -111,7 +111,7 @@ CORPUS = {
     "docs/compatibility/2026-01-02-sample-record.md":
         dict(role="evidence", lifecycle="active",
              body="# Record\n\nObserved things.\n"),
-    "docs/compatibility/README.md":
+    "docs/compatibility/INDEX.md":
         dict(role="working", lifecycle="active",
              body="# Records\n\n- [`2026-01-02-sample-record.md`]"
                   "(2026-01-02-sample-record.md)\n"),
@@ -122,9 +122,9 @@ CORPUS = {
         dict(role="working", lifecycle="active", body="# Migration\n\nPlan.\n"),
     "docs/notes.md":
         dict(role="working", lifecycle="active", body="# Notes\n"),
-    "docs/README.md":
+    "docs/INDEX.md":
         dict(role="working", lifecycle="active", body=None),  # generated
-    "docs/history/README.md":
+    "docs/history/INDEX.md":
         dict(role="working", lifecycle="active",
              body="# Archive pointer index\n\nNo retired records yet.\n"),
     "mod-core/README.md":
@@ -158,7 +158,7 @@ def corpus_index_text(corpus, sup=None):
 def render(root, corpus, sup=None):
     """(Re)write every managed document plus the generated corpus index."""
     for path, spec in corpus.items():
-        if path == "docs/README.md":
+        if path == "docs/INDEX.md":
             body = "# Corpus index\n\n" + corpus_index_text(corpus, sup)
         else:
             body = spec["body"]
@@ -414,7 +414,7 @@ def _(root):
 def _(root):
     write(root, "docs/history/extra.md", "# extra\n")
     expect("second_file_in_history_dir", run_doctor(root), "failed",
-           "admits only docs/history/README.md")
+           "admits only docs/history/INDEX.md")
 
 
 @case("absent_standing_file_tolerated")
@@ -512,7 +512,7 @@ def _(root):
     os.symlink(outside, os.path.join(root, "hist-escape"))
     mutate_manifest(root, lambda mf: mf.update(
         historical_files=mf["historical_files"] + ["hist-escape/OUT.md"]))
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            f"| hist-escape/OUT.md | external | working | historical | - "
            f"| {blob_id(data)} | - |\n")
     expect_findings("escaping_historical_path", run_doctor(root), "failed",
@@ -651,7 +651,7 @@ def _(root):
 @case("root_contract_without_sidecar_fails")
 def _(root):
     write(root, "AGENTS.md", "# Agents\n\nno meta yet\n")
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| AGENTS.md | fixture doc | contract | active | - |\n", "")
     expect("root_contract_without_sidecar_fails", run_doctor(root), "failed",
            "no doc-meta and no sidecar index row")
@@ -780,21 +780,21 @@ def _(root):
 
 @case("ghost_listed_absent")
 def _(root):
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "| docs/adr/0009-ghost.md | gone | contract | active | - |\n")
     expect("ghost_listed_absent", run_doctor(root), "failed", "ghost")
 
 
 @case("absent_corpus_index_fails")
 def _(root):
-    os.unlink(os.path.join(root, "docs/README.md"))
+    os.unlink(os.path.join(root, "docs/INDEX.md"))
     expect("absent_corpus_index_fails", run_doctor(root), "failed",
-           "corpus index docs/README.md absent")
+           "corpus index docs/INDEX.md absent")
 
 
 @case("duplicate_index_rows")
 def _(root):
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "| docs/migration.md | again | working | active | - |\n")
     expect("duplicate_index_rows", run_doctor(root), "failed",
            "duplicate path row")
@@ -802,7 +802,7 @@ def _(root):
 
 @case("corpus_blank_claim_cell")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| docs/architecture.md | fixture doc |",
             "| docs/architecture.md |  |")
     expect("corpus_blank_claim_cell", run_doctor(root), "failed",
@@ -811,7 +811,7 @@ def _(root):
 
 @case("corpus_row_bad_vocabulary")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| docs/notes.md | fixture doc | working | active | - |",
             "| docs/notes.md | fixture doc | scribe | someday | - |")
     expect("corpus_row_bad_vocabulary", run_doctor(root), "failed",
@@ -820,7 +820,7 @@ def _(root):
 
 @case("managed_row_wrong_cell_count")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| docs/notes.md | fixture doc | working | active | - |",
             "| docs/notes.md | fixture doc | working |")
     expect_findings("managed_row_wrong_cell_count", run_doctor(root), "failed",
@@ -830,7 +830,7 @@ def _(root):
 @case("unmanaged_index_row")
 def _(root):
     write(root, "UNMANAGED.txt", "not a corpus file\n")
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "| UNMANAGED.txt | rogue | working | active | - |\n")
     expect("unmanaged_index_row", run_doctor(root), "failed",
            "outside the managed corpus")
@@ -850,7 +850,7 @@ def _(root):
         corpus["docs/adr/0002-second-decision.md"]["lifecycle"] = "superseded"
     rewrite(root, sup={"docs/adr/0002-second-decision.md":
                        "docs/adr/0001-first-decision.md"}, corpus_mut=mut)
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| docs/adr/0002-second-decision.md | fixture doc | contract "
             "| superseded | docs/adr/0001-first-decision.md |",
             "| docs/adr/0002-second-decision.md | fixture doc | contract "
@@ -862,7 +862,7 @@ def _(root):
 @case("sidecar_conditional_lifecycle_invalid")
 def _(root):
     write(root, "AGENTS.md", "# Agents\n\nno meta\n")
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| AGENTS.md | fixture doc | contract | active | - |",
             "| AGENTS.md | fixture doc | contract | superseded | - |")
     expect("sidecar_conditional_lifecycle_invalid", run_doctor(root),
@@ -872,7 +872,7 @@ def _(root):
 @case("sidecar_partial_supersession_rejected")
 def _(root):
     write(root, "AGENTS.md", "# Agents\n\nno meta\n")
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| AGENTS.md | fixture doc | contract | active | - |",
             "| AGENTS.md | fixture doc | contract | partially-superseded "
             "| docs/architecture.md |")
@@ -882,7 +882,7 @@ def _(root):
 
 @case("historical_row_wrong_lifecycle")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| NOTES.md | legacy notes | working | historical |",
             "| NOTES.md | legacy notes | working | active |")
     expect("historical_row_wrong_lifecycle", run_doctor(root), "failed",
@@ -891,7 +891,7 @@ def _(root):
 
 @case("historical_row_nondash_superseded")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             "| NOTES.md | legacy notes | working | historical | - |",
             "| NOTES.md | legacy notes | working | historical "
             "| docs/migration.md |")
@@ -901,7 +901,7 @@ def _(root):
 
 @case("historical_row_short_blob")
 def _(root):
-    replace(root, "docs/README.md", blob_id(NOTES_BYTES),
+    replace(root, "docs/INDEX.md", blob_id(NOTES_BYTES),
             blob_id(NOTES_BYTES)[:12])
     expect("historical_row_short_blob", run_doctor(root), "failed",
            "source_blob must be full 40-hex")
@@ -909,7 +909,7 @@ def _(root):
 
 @case("historical_row_bad_current_homes")
 def _(root):
-    replace(root, "docs/README.md", f"{blob_id(NOTES_BYTES)} | - |",
+    replace(root, "docs/INDEX.md", f"{blob_id(NOTES_BYTES)} | - |",
             f"{blob_id(NOTES_BYTES)} | /absolute,,bad |")
     expect("historical_row_bad_current_homes", run_doctor(root), "failed",
            "current_homes invalid")
@@ -917,7 +917,7 @@ def _(root):
 
 @case("historical_file_without_row")
 def _(root):
-    replace(root, "docs/README.md",
+    replace(root, "docs/INDEX.md",
             f"| NOTES.md | legacy notes | working | historical | - "
             f"| {blob_id(NOTES_BYTES)} | - |\n", "")
     expect("historical_file_without_row", run_doctor(root), "failed",
@@ -926,7 +926,7 @@ def _(root):
 
 @case("alias_target_invalid")
 def _(root):
-    replace(root, "docs/README.md", "| CLAUDE.md | AGENTS.md |",
+    replace(root, "docs/INDEX.md", "| CLAUDE.md | AGENTS.md |",
             "| CLAUDE.md | NOPE.md |")
     expect("alias_target_invalid", run_doctor(root), "failed",
            "alias target not a managed regular file")
@@ -934,7 +934,7 @@ def _(root):
 
 @case("alias_row_deleted")
 def _(root):
-    replace(root, "docs/README.md", "| CLAUDE.md | AGENTS.md |\n", "")
+    replace(root, "docs/INDEX.md", "| CLAUDE.md | AGENTS.md |\n", "")
     expect("alias_row_deleted", run_doctor(root), "failed",
            "declared alias without an index row")
 
@@ -984,7 +984,7 @@ def _(root):
     os.symlink("../AGENTS.md", os.path.join(root, "blocked/CLAUDE.md"))
     mutate_manifest(root, lambda mf: mf.update(
         alias_symlinks=mf["alias_symlinks"] + ["blocked/CLAUDE.md"]))
-    append(root, "docs/README.md", "| blocked/CLAUDE.md | AGENTS.md |\n")
+    append(root, "docs/INDEX.md", "| blocked/CLAUDE.md | AGENTS.md |\n")
     os.chmod(os.path.join(root, "blocked"), 0)
     try:
         r = run_doctor(root)
@@ -1001,7 +1001,7 @@ def _(root):
 # --------------------------------------------------------- fence contract --
 @case("fenced_table_row_inert")
 def _(root):
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "\n```text\n"
            "| docs/adr/0009-ghost.md | example | contract | active | - |\n"
            "```\n")
@@ -1012,7 +1012,7 @@ def _(root):
 def _(root):
     # a backtick opener whose info string contains a backtick is ordinary
     # content, so the row below it is a real index row
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "\n```not`a-valid-info-string\n"
            "| docs/adr/0009-ghost.md | example | contract | active | - |\n"
            "```\n")
@@ -1022,7 +1022,7 @@ def _(root):
 
 @case("tilde_info_string_is_a_fence")
 def _(root):
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "\n~~~not`a-valid-info-string\n"
            "| docs/adr/0009-ghost.md | example | contract | active | - |\n"
            "~~~\n")
@@ -1031,7 +1031,7 @@ def _(root):
 
 @case("nested_fence_content_inert")
 def _(root):
-    append(root, "docs/README.md",
+    append(root, "docs/INDEX.md",
            "\n````text\nexample only:\n```\n"
            "| docs/adr/0009-ghost.md | example | contract | active | - |\n"
            "```\n````\n")
@@ -1174,25 +1174,46 @@ def _(root):
           f"after={json.dumps(after['findings'])[:200]}")
 
 
-@case("version_1_membership_is_refused")
+@case("superseded_membership_versions_are_refused")
 def _(root):
-    """v1 named classes opaquely (adr, corpus-index); v2 names locations.
-    The same string means different things, which is what the version gate
-    is for."""
-    write(root, "docs-corpus.json", json.dumps({
-        "conforms_to": "1",
-        "classes": ["prd", "adr", "evidence", "evidence-index",
-                    "corpus-index", "architecture", "archive-index",
-                    "standing"],
-        "standing_files": [], "managed_globs": [],
-        "managed_files": ["AGENTS.md"], "alias_symlinks": [],
-        "historical_files": [], "inflight_globs": ["PROPOSAL-*.md"],
-        "protected_mainline_ref": "refs/heads/main"}))
-    expect_findings("version_1_membership_is_refused", run_doctor(root),
-                    "execution_error",
-                    [("execution_error", "is not implemented by this "
-                                         "docs-doctor", 1)],
-                    absent=("the shipped library does not define",))
+    """Each bump changed what an existing name MEANS, which is the only
+    thing that justifies one: v1 named classes opaquely (adr,
+    corpus-index), v2 named locations, v3 moved the corpus index off
+    docs/INDEX.md. A stale file must be refused, never reinterpreted."""
+    stale = {
+        "1": ["prd", "adr", "evidence", "evidence-index", "corpus-index",
+              "architecture", "archive-index", "standing"],
+        "2": ["docs/adr", "docs/prd", "docs/compatibility",
+              "docs/compatibility/INDEX.md", "docs/INDEX.md",
+              "docs/architecture.md", "docs/history/INDEX.md"],
+    }
+    for version, classes in stale.items():
+        write(root, "docs-corpus.json", json.dumps({
+            "conforms_to": version, "classes": classes,
+            "standing_files": [], "managed_globs": [],
+            "managed_files": ["AGENTS.md"], "alias_symlinks": [],
+            "historical_files": [], "inflight_globs": ["PROPOSAL-*.md"],
+            "protected_mainline_ref": "refs/heads/main"}))
+        expect_findings(f"superseded_membership_versions_are_refused.v{version}",
+                        run_doctor(root), "execution_error",
+                        [("execution_error", "is not implemented by this "
+                                             "docs-doctor", 1)],
+                        absent=("the shipped library does not define",))
+
+
+@case("docs_readme_is_no_longer_the_index")
+def _(root):
+    """The corpus index moved to docs/INDEX.md so it stops colliding with
+    the repository's own README.md. The OLD name now classifies as nothing
+    — it is not quietly still accepted as an index."""
+    stale = "docs/" + "README.md"   # literal: a blanket rename must not
+    write(root, stale, meta_block(   # rewrite the very name under test
+        {"role": "working", "lifecycle": "active"}) + "\n# stray\n")
+    expect_findings("docs_readme_is_no_longer_the_index", run_doctor(root),
+                    "failed",
+                    [{"result": "failed", "reason": "matches no class",
+                      "path": stale, "count": 1}],
+                    absent=("corpus index docs/INDEX.md absent",))
 
 
 @case("init_refuses_to_overwrite")
@@ -1329,7 +1350,7 @@ def _(root):
 
 @case("library_indexes_class_wrong_type")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "docs/compatibility/README.md").update(
+    run = with_library(lambda lib: library_class(lib, "docs/compatibility/INDEX.md").update(
         indexes_class=[]))
     expect("library_indexes_class_wrong_type", run(root), "execution_error",
            "must name a dir class")
