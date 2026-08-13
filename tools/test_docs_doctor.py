@@ -89,8 +89,9 @@ def replace(root, rel, old, new):
 # ---------------------------------------------------------------- baseline --
 FIXTURE_MEMBERSHIP = {
     "conforms_to": docs_doctor.CLASS_LIBRARY_VERSION,
-    "classes": ["prd", "adr", "evidence", "evidence-index", "corpus-index",
-                "architecture", "archive-index", "standing"],
+    "classes": ["docs/adr", "docs/prd", "docs/compatibility",
+                "docs/compatibility/README.md", "docs/README.md",
+                "docs/architecture.md", "docs/history/README.md"],
     "standing_files": ["docs/migration.md", "docs/notes.md"],
     "managed_globs": ["mod-*/README.md"],
     "managed_files": ["AGENTS.md", "CONTEXT.md", "README.md"],
@@ -364,7 +365,7 @@ def _(root):
     write(root, "docs/adr/0001-duplicate.md", meta_block(
         {"role": "contract", "lifecycle": "active"}) + "\n# Dup\n")
     expect("duplicate_adr_number", run_doctor(root), "failed",
-           "duplicate number 0001 in class adr")
+           "duplicate number 0001 in class docs/adr")
 
 
 @case("prd_valid_clean")
@@ -385,7 +386,7 @@ def _(root):
             role="contract", lifecycle="active", body="# Product two\n")
     rewrite(root, corpus_mut=mut)
     expect("prd_duplicate_number", run_doctor(root), "failed",
-           "duplicate number 0001 in class prd")
+           "duplicate number 0001 in class docs/prd")
 
 
 @case("invalid_calendar_date")
@@ -1114,24 +1115,84 @@ def _(root):
           f"aggregate={r['aggregate']} {json.dumps(r['findings'])[:300]}")
 
 
-@case("init_declares_only_present_classes")
+@case("init_on_empty_repo_admits_everything")
 def _(root):
-    """Honest opening declaration: setup must not pre-authorise genres the
-    repository does not have, or the closed-world rule starts life defeated."""
-    repo = fresh_repo(root, "narrow", COLD_START)
+    """NORTH-STAR non-goal 9: the shipped default is the MAXIMUM. A repo
+    with no documents yet must still be able to write its first one —
+    deriving the whitelist from what exists would describe its past."""
+    repo = fresh_repo(root, "empty", {"README.md": "# new project\n"})
     init(repo)
     with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
         mem = json.load(fh)
-    absent = [n for n in ("prd", "evidence", "evidence-index",
-                          "archive-index", "standing")
-              if n in mem["classes"]]
-    write(repo, "docs/prd/0001-a-product.md", "# p\n")
-    check("init_declares_only_present_classes",
-          not absent and mem["classes"] == ["adr", "corpus-index",
-                                            "architecture"]
-          and any(f["reason"] == "unknown subdirectory under docs/"
-                  for f in run_doctor(repo)["findings"]),
-          f"declared={mem['classes']} unexpected={absent}")
+    shipped = [c["name"] for c in docs_doctor.CLASS_LIBRARY["classes"]]
+    write(repo, "docs/adr/0001-first-decision.md",
+          meta_block({"role": "contract", "lifecycle": "active"}) + "\n# D\n")
+    check("init_on_empty_repo_admits_everything",
+          mem["classes"] == shipped
+          and not any(f["reason"] in ("matches no class",
+                                      "unknown subdirectory under docs/")
+                      for f in run_doctor(repo)["findings"]),
+          f"declared={mem['classes']}")
+
+
+@case("init_whitelist_is_one_entry_per_line")
+def _(root):
+    """Narrowing is described as deleting lines, so the whitelist has to be
+    written as lines."""
+    repo = fresh_repo(root, "lines", COLD_START)
+    init(repo)
+    with open(os.path.join(repo, "docs-corpus.json"), encoding="utf-8") as fh:
+        text = fh.read()
+    shipped = [c["name"] for c in docs_doctor.CLASS_LIBRARY["classes"]]
+    own_line = [n for n in shipped
+                if any(line.strip().rstrip(",") == f'"{n}"'
+                       for line in text.splitlines())]
+    check("init_whitelist_is_one_entry_per_line",
+          own_line == shipped, f"on their own line: {own_line}")
+
+
+@case("deleting_a_line_forbids_that_location")
+def _(root):
+    repo = fresh_repo(root, "filtered", COLD_START)
+    init(repo)
+    write(repo, "docs/prd/0001-a-product.md",
+          meta_block({"role": "contract", "lifecycle": "active"}) + "\n# P\n")
+    before = run_doctor(repo)
+    path = os.path.join(repo, "docs-corpus.json")
+    with open(path, encoding="utf-8") as fh:
+        kept = [ln for ln in fh.read().splitlines()
+                if ln.strip().rstrip(",") != '"docs/prd"']
+    write(repo, "docs-corpus.json", "\n".join(kept) + "\n")
+    after = run_doctor(repo)
+    check("deleting_a_line_forbids_that_location",
+          not any(f["reason"] == "unknown subdirectory under docs/"
+                  for f in before["findings"])
+          and any(f["path"] == "docs/prd"
+                  and f["reason"] == "unknown subdirectory under docs/"
+                  for f in after["findings"]),
+          f"before={json.dumps(before['findings'])[:200]} "
+          f"after={json.dumps(after['findings'])[:200]}")
+
+
+@case("version_1_membership_is_refused")
+def _(root):
+    """v1 named classes opaquely (adr, corpus-index); v2 names locations.
+    The same string means different things, which is what the version gate
+    is for."""
+    write(root, "docs-corpus.json", json.dumps({
+        "conforms_to": "1",
+        "classes": ["prd", "adr", "evidence", "evidence-index",
+                    "corpus-index", "architecture", "archive-index",
+                    "standing"],
+        "standing_files": [], "managed_globs": [],
+        "managed_files": ["AGENTS.md"], "alias_symlinks": [],
+        "historical_files": [], "inflight_globs": ["PROPOSAL-*.md"],
+        "protected_mainline_ref": "refs/heads/main"}))
+    expect_findings("version_1_membership_is_refused", run_doctor(root),
+                    "execution_error",
+                    [("execution_error", "is not implemented by this "
+                                         "docs-doctor", 1)],
+                    absent=("the shipped library does not define",))
 
 
 @case("init_refuses_to_overwrite")
@@ -1194,17 +1255,28 @@ def _(root):
 @case("manifest_duplicate_class_name")
 def _(root):
     mutate_manifest(root, lambda mf: mf.update(
-        classes=mf["classes"] + ["adr"]))
+        classes=mf["classes"] + ["docs/adr"]))
     expect("manifest_duplicate_class_name", run_doctor(root),
            "execution_error", "more than once")
 
 
-@case("manifest_standing_files_without_class")
+@case("standing_files_need_no_class_entry")
 def _(root):
-    mutate_manifest(root, lambda mf: mf.update(
-        classes=[c for c in mf["classes"] if c != "standing"]))
-    expect("manifest_standing_files_without_class", run_doctor(root),
-           "execution_error", "nothing would classify those documents")
+    """standing_files carries its own members, so a name in `classes` would
+    say nothing; the class is synthesised and the whitelist stays a list of
+    locations only."""
+    with open(os.path.join(root, "docs-corpus.json"), encoding="utf-8") as fh:
+        mem = json.load(fh)
+    composed = Doctor._compose(mem)
+    synthesised = [c for c in composed["docs_classes"]
+                   if c["name"] == docs_doctor.STANDING_CLASS]
+    check("standing_files_need_no_class_entry",
+          run_doctor(root)["aggregate"] == "clean"
+          and not any(n == docs_doctor.STANDING_CLASS
+                      for n in mem["classes"])
+          and len(synthesised) == 1
+          and synthesised[0]["files"] == mem["standing_files"],
+          f"classes={mem['classes']} synthesised={synthesised}")
 
 
 @case("manifest_unknown_key")
@@ -1225,7 +1297,7 @@ def _(root):
 
 @case("library_bad_regex")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "adr").update(
+    run = with_library(lambda lib: library_class(lib, "docs/adr").update(
         basename_regex="(unclosed"))
     expect("library_bad_regex", run(root), "execution_error",
            "basename_regex invalid")
@@ -1233,7 +1305,7 @@ def _(root):
 
 @case("library_unique_by_wrong_type")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "adr").update(
+    run = with_library(lambda lib: library_class(lib, "docs/adr").update(
         unique_by=[]))
     expect("library_unique_by_wrong_type", run(root), "execution_error",
            "must name a capture group")
@@ -1241,7 +1313,7 @@ def _(root):
 
 @case("library_option_misapplied")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "adr").update(
+    run = with_library(lambda lib: library_class(lib, "docs/adr").update(
         exactly_one_file_in_dir=True))
     expect("library_option_misapplied", run(root), "execution_error",
            "not applicable to a dir class")
@@ -1249,15 +1321,15 @@ def _(root):
 
 @case("library_indexes_class_on_dir")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "adr").update(
-        indexes_class="evidence"))
+    run = with_library(lambda lib: library_class(lib, "docs/adr").update(
+        indexes_class="docs/compatibility"))
     expect("library_indexes_class_on_dir", run(root), "execution_error",
            "not applicable to a dir class")
 
 
 @case("library_indexes_class_wrong_type")
 def _(root):
-    run = with_library(lambda lib: library_class(lib, "evidence-index").update(
+    run = with_library(lambda lib: library_class(lib, "docs/compatibility/README.md").update(
         indexes_class=[]))
     expect("library_indexes_class_wrong_type", run(root), "execution_error",
            "must name a dir class")
@@ -1269,7 +1341,7 @@ def _(root):
     names classes and nothing else, so an unsummarised class would be
     undiscoverable to the person writing that file."""
     def drop(lib):
-        library_class(lib, "adr").pop("summary")
+        library_class(lib, "docs/adr").pop("summary")
     expect("library_class_without_summary", with_library(drop)(root),
            "execution_error", "needs a nonempty summary")
 
@@ -1441,7 +1513,8 @@ def _(root):
     that stops declaring a class stops admitting that genre."""
     clean = run_doctor(root)
     mutate_manifest(root, lambda mf: mf.update(
-        classes=[c for c in mf["classes"] if c not in ("prd", "adr")]))
+        classes=[c for c in mf["classes"]
+                 if c not in ("docs/prd", "docs/adr")]))
     reduced = run_doctor(root)
     check("reducing_classes_closes_the_genre",
           clean["aggregate"] == "clean"

@@ -69,12 +69,32 @@ docs-doctor --repo .          # 2. see what is left to do
 docs-doctor --classes         # 3. what else may be declared, and where
 ```
 
-**Step 1** declares only the classes your repository already has documents
-for — it does not pre-authorise genres you are not using, because the point
-of the check is that adding a genre later is a deliberate edit. It refuses to
-overwrite an existing `docs-corpus.json` without `--force`. If `docs/README.md`
-is absent it scaffolds one, with a row per document it found and a `TODO`
-claim in each.
+**Step 1** writes a working configuration for any repository, new or old. The
+`classes` array it writes is **the whitelist of document locations this
+repository admits**, and it starts complete — every location the tool ships,
+one per line:
+
+```json
+ "classes": [
+   "docs/adr",
+   "docs/prd",
+   "docs/compatibility",
+   "docs/compatibility/README.md",
+   "docs/README.md",
+   "docs/architecture.md",
+   "docs/history/README.md"
+ ],
+```
+
+**That array is where you filter.** Delete the lines you do not want. A
+location you do not list is *forbidden*, not merely unchecked — documents
+there are reported as unknown, which is what makes adding a genre later a
+deliberate edit rather than a drift. Step 1 also refuses to overwrite an
+existing `docs-corpus.json` without `--force`, and scaffolds `docs/README.md`
+when absent, with a row per document it found and a `TODO` claim in each.
+
+Documents that belong under `docs/` but fit none of those locations go in
+`standing_files`, listed individually.
 
 **Step 2** reports what remains, and it is normally two things: each document
 needs a `doc-meta` block, and each row of `docs/README.md` needs a real claim
@@ -95,10 +115,12 @@ class the document belongs to — `--classes` shows which classes fix a role.
 run without a block, on their index row as a temporary sidecar; that reports
 `degraded` rather than `failed`.
 
-**Step 3** lists the shipped classes. Declaring one admits its location;
-omitting it forbids that location entirely. Everything else in
-`docs-corpus.json` is membership — root documents, aliases, module globs, and
-which root working-record genres such as `PROPOSAL-*.md` your repository uses.
+**Step 3** reprints that whitelist with a description of each location, for
+when you are narrowing it later and the file alone is not enough. Everything
+else in `docs-corpus.json` names files rather than locations: `managed_files`
+(root documents), `managed_globs` (e.g. `mod-*/README.md`), `alias_symlinks`,
+`historical_files`, and `inflight_globs` (root working records such as
+`PROPOSAL-*.md`).
 
 Then wire it into whatever gates your changes:
 

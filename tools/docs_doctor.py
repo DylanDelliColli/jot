@@ -67,44 +67,44 @@ DATED = (r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})"
 # sibling file does not follow the symlink. Being code, the library also
 # cannot skew from the implementation that reads it.
 #
-# It is the MAXIMUM a repository may declare, never a structure it must
-# adopt. A repository reduces it by listing fewer names in `classes`; the
-# `standing` class's file list is per-repo membership because its members
-# are documents, not a genre.
-CLASS_LIBRARY_VERSION = "1"
+# It is the MAXIMUM a repository may admit, never a structure it must
+# adopt: --init hands the whole list over and the author narrows it by
+# deleting lines. Deriving it from what a repository already contains would
+# describe its past and leave a new one unable to write its first document.
+#
+# Version 2 renamed every class to the location it admits, so the `classes`
+# array reads as the whitelist it is without a second command. Version 1's
+# opaque names (adr, evidence, corpus-index) are refused by the version gate.
+CLASS_LIBRARY_VERSION = "2"
 CLASS_LIBRARY = {
     "classes": [
-        {"name": "prd", "dir": "docs/prd", "basename_regex": NUMBERED,
+        {"name": "docs/adr", "dir": "docs/adr", "basename_regex": NUMBERED,
          "unique_by": "number", "role": "contract",
-         "summary": "docs/prd/0001-some-slug.md — numbered product "
-                    "requirements, one document per number"},
-        {"name": "adr", "dir": "docs/adr", "basename_regex": NUMBERED,
+         "summary": "numbered architecture decisions, "
+                    "docs/adr/0001-some-slug.md, one per number"},
+        {"name": "docs/prd", "dir": "docs/prd", "basename_regex": NUMBERED,
          "unique_by": "number", "role": "contract",
-         "summary": "docs/adr/0001-some-slug.md — numbered architecture "
-                    "decisions, one document per number"},
-        {"name": "evidence", "dir": "docs/compatibility",
+         "summary": "numbered product requirements, "
+                    "docs/prd/0001-some-slug.md, one per number"},
+        {"name": "docs/compatibility", "dir": "docs/compatibility",
          "basename_regex": DATED, "calendar_date_group": "date",
          "role": "evidence",
-         "summary": "docs/compatibility/2026-08-13-some-slug.md — dated "
-                    "observation records; the date must be a real one"},
-        {"name": "evidence-index", "file": "docs/compatibility/README.md",
-         "indexes_class": "evidence",
-         "summary": "docs/compatibility/README.md — index of the evidence "
-                    "records"},
-        {"name": "corpus-index", "file": "docs/README.md",
-         "summary": "docs/README.md — the corpus map; every managed "
-                    "document needs a row here"},
-        {"name": "architecture", "file": "docs/architecture.md",
+         "summary": "dated observation records, "
+                    "docs/compatibility/2026-08-13-some-slug.md"},
+        {"name": "docs/compatibility/README.md",
+         "file": "docs/compatibility/README.md",
+         "indexes_class": "docs/compatibility",
+         "summary": "index of the dated observation records"},
+        {"name": "docs/README.md", "file": "docs/README.md",
+         "summary": "the corpus map; every managed document needs a row "
+                    "here. Removing this line is not advised"},
+        {"name": "docs/architecture.md", "file": "docs/architecture.md",
          "role": "contract",
-         "summary": "docs/architecture.md — one standing architecture "
-                    "contract"},
-        {"name": "archive-index", "file": "docs/history/README.md",
+         "summary": "one standing architecture contract"},
+        {"name": "docs/history/README.md", "file": "docs/history/README.md",
          "exactly_one_file_in_dir": True,
-         "summary": "docs/history/README.md — archive pointer index, and "
-                    "the only file docs/history/ may hold"},
-        {"name": "standing", "files": [],   # members come from membership
-         "summary": "the documents you list in standing_files — one-off "
-                    "standing documents that fit no other class"},
+         "summary": "archive pointer index, and the only file "
+                    "docs/history/ may hold"},
     ],
     "discovery": {
         "docs": "filesystem walk of docs/, no ignore filtering",
@@ -115,7 +115,15 @@ CLASS_LIBRARY = {
     "glob_semantics": "python pathlib PurePath.full_match; "
                       "** crosses separators",
 }
-STANDING_CLASS = "standing"
+# Standing documents have no library entry: their members ARE the
+# membership, so a name in `classes` would carry no information. The class
+# is synthesised from standing_files, and takes that key's name so any
+# finding about it points at the line the author would edit.
+STANDING_CLASS = "standing_files"
+# The corpus index is both a class name and the path it admits, since a
+# class IS its location from version 2 on. Named once so a rename cannot
+# leave a stale literal behind.
+CORPUS_INDEX = "docs/README.md"
 
 # Exactly the keys a repository declares. inflight_globs is membership, not
 # library: it names which working-record genres live at THIS repository's
@@ -440,12 +448,6 @@ class Doctor:
                                 f"{', '.join(known)}")
             for n in sorted({n for n in declared if declared.count(n) > 1}):
                 errs.append(f"classes lists {n!r} more than once")
-            standing = mem.get("standing_files")
-            if isinstance(standing, list) and standing \
-                    and STANDING_CLASS not in declared:
-                errs.append(f"standing_files is non-empty but the "
-                            f"{STANDING_CLASS!r} class is not declared, so "
-                            "nothing would classify those documents")
         return errs
 
     @staticmethod
@@ -453,14 +455,13 @@ class Doctor:
         """Membership plus the shipped library, in the single shape every
         check already consumes. Composition is the ONLY thing the split
         changes: no check learns that its manifest arrived in two halves."""
-        classes = []
-        for spec in CLASS_LIBRARY["classes"]:
-            if spec["name"] not in mem["classes"]:
-                continue
-            spec = dict(spec)
-            if spec["name"] == STANDING_CLASS:
-                spec["files"] = list(mem["standing_files"])
-            classes.append(spec)
+        classes = [dict(spec) for spec in CLASS_LIBRARY["classes"]
+                   if spec["name"] in mem["classes"]]
+        if mem["standing_files"]:
+            classes.append({"name": STANDING_CLASS,
+                            "files": list(mem["standing_files"]),
+                            "summary": "one-off standing documents that fit "
+                                       "no other class"})
         return {"docs_classes": classes,
                 "managed_globs": list(mem["managed_globs"]),
                 "managed_files": list(mem["managed_files"]),
@@ -870,7 +871,7 @@ class Doctor:
 
     # -- corpus index ---------------------------------------------------------
     def check_corpus_index(self):
-        rel = "docs/README.md"
+        rel = CORPUS_INDEX
         listed = {}
         if not self._exists(rel):
             for path in self.managed:
@@ -1092,11 +1093,15 @@ class Doctor:
 
 
 def derive_membership(repo):
-    """Read a repository and propose the membership that matches it.
+    """Propose membership for a repository: the WHOLE whitelist, plus the
+    root documents actually present.
 
-    Declares a class only where the repository already has documents for it,
-    so setup does not pre-authorise genres nobody uses — the closed-world
-    rule is only worth anything if the opening declaration is honest.
+    The shipped library is the maximum a repository may admit, and setup
+    hands it over whole — narrowing is the author deleting lines from
+    `classes`. Deriving the list from what already exists would describe the
+    repository's past instead of declaring its future, and would leave a new
+    repository unable to write its first ADR without editing this file.
+    Root documents are read from disk because those are facts, not policy.
     Returns (membership, [notes for the operator])."""
     repo = os.path.realpath(repo)
     notes = []
@@ -1104,40 +1109,25 @@ def derive_membership(repo):
     def rel(*parts):
         return os.path.join(repo, *parts)
 
-    present = []
-    for spec in CLASS_LIBRARY["classes"]:
-        if "dir" in spec:
-            d = rel(spec["dir"])
-            if os.path.isdir(d) and any(
-                    re.fullmatch(spec["basename_regex"], n)
-                    for n in os.listdir(d)):
-                present.append(spec["name"])
-        elif "file" in spec and os.path.isfile(rel(spec["file"])):
-            present.append(spec["name"])
-    # the corpus index is not optional: every other check reports against it,
-    # so a repository that lacks one is getting scaffolded, not excused
-    if "corpus-index" not in present:
-        present.append("corpus-index")
-
     standing = []
     docs_dir = rel("docs")
     if os.path.isdir(docs_dir):
         claimed = {c.get("file") for c in CLASS_LIBRARY["classes"]}
+        # a directory is claimed by a file class too — docs/history/ holds
+        # only docs/history/README.md, and classify_docs knows that
         claimed_dirs = {c["dir"] for c in CLASS_LIBRARY["classes"]
                         if "dir" in c}
+        claimed_dirs |= {os.path.dirname(f) for f in claimed if f}
         for name in sorted(os.listdir(docs_dir)):
             p = f"docs/{name}"
             if name.endswith(".md") and os.path.isfile(rel(p)) \
                     and p not in claimed:
                 standing.append(p)
-        for name in sorted(os.listdir(docs_dir)):
             sub = f"docs/{name}"
             if os.path.isdir(rel(sub)) and sub not in claimed_dirs:
                 notes.append(f"{sub}/ matches no shipped class; move its "
                              f"documents or the tree will report it as an "
                              f"unknown subdirectory")
-    if standing:
-        present.append("standing")
 
     managed, aliases = [], []
     for name in sorted(os.listdir(repo)):
@@ -1152,9 +1142,8 @@ def derive_membership(repo):
     managed = [m for m in managed
                if not any(fnmatch.fnmatch(m, g) for g in inflight)]
 
-    order = [c["name"] for c in CLASS_LIBRARY["classes"]]
     return {"conforms_to": CLASS_LIBRARY_VERSION,
-            "classes": sorted(set(present), key=order.index),
+            "classes": [c["name"] for c in CLASS_LIBRARY["classes"]],
             "standing_files": standing,
             "managed_globs": [],
             "managed_files": managed,
@@ -1167,11 +1156,19 @@ def derive_membership(repo):
 
 def render_membership(mem):
     """Stable, readable JSON — this file is read by people far more often
-    than it is written."""
+    than it is written.
+
+    `classes` gets one entry per line because narrowing the repository is
+    literally deleting lines from it; a whitelist wrapped onto one line
+    cannot be filtered the way its own instructions describe."""
     lines = ['{"conforms_to": %s,' % json.dumps(mem["conforms_to"])]
-    for key in ("classes", "standing_files", "managed_globs",
-                "managed_files", "alias_symlinks", "historical_files",
-                "inflight_globs"):
+    lines.append(' "classes": [')
+    for i, name in enumerate(mem["classes"]):
+        comma = "," if i < len(mem["classes"]) - 1 else ""
+        lines.append(f"   {json.dumps(name)}{comma}")
+    lines.append(" ],")
+    for key in ("standing_files", "managed_globs", "managed_files",
+                "alias_symlinks", "historical_files", "inflight_globs"):
         lines.append(f' {json.dumps(key)}: {json.dumps(mem[key])},')
     lines.append(' "protected_mainline_ref": %s}'
                  % json.dumps(mem["protected_mainline_ref"]))
@@ -1191,8 +1188,7 @@ def scaffold_corpus_index(repo, mem):
     if doctor.tracked is None or not doctor.docs_observed:
         return None
     doctor.collect_managed()
-    index_rel = next(c["file"] for c in doctor.manifest["docs_classes"]
-                     if c["name"] == "corpus-index")
+    index_rel = CORPUS_INDEX
     rows = ["| path | claim | role | lifecycle | superseded-by |",
             "|---|---|---|---|---|"]
     # the index is itself a managed document; it does not exist yet, so
@@ -1241,22 +1237,27 @@ def cmd_init(repo, force):
     with open(manifest_path, "w", encoding="utf-8") as fh:
         fh.write(render_membership(mem))
     written.append("docs-corpus.json")
-    index_path = os.path.join(repo, "docs", "README.md")
+    index_path = os.path.join(repo, CORPUS_INDEX)
     if not os.path.exists(index_path):
         body = scaffold_corpus_index(repo, mem)
         if body is not None:
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8") as fh:
                 fh.write(body)
-            written.append("docs/README.md")
+            written.append(CORPUS_INDEX)
 
     print(f"wrote {', '.join(written)}")
-    print(f"declared classes: {', '.join(mem['classes'])}")
     for note in notes:
         print(f"note: {note}")
-    print("\nDeclared only the classes this repository already has documents "
-          "for.\nRun --classes to see what else may be declared; adding a "
-          "genre is a\ndeliberate edit to the classes array.\n")
+    print('\nThe "classes" array in docs-corpus.json is the whitelist of '
+          "document\nlocations this repository admits. It starts complete — "
+          "every location\nthe tool ships. FILTER IT BY DELETING LINES you "
+          "do not want:\n")
+    for c in CLASS_LIBRARY["classes"]:
+        print(f'  "{c["name"]}"'.ljust(34) + f"  {c['summary']}")
+    print("\nA deleted location is not merely unchecked, it is forbidden: "
+          "documents\nthere will be reported as unknown. Standing documents "
+          "that fit no\nlocation go in \"standing_files\" instead.\n")
     print("Next: run the check. Remaining findings are yours to act on —\n"
           "typically a doc-meta block per document and a real claim for\n"
           "each row of docs/README.md.")
@@ -1266,17 +1267,22 @@ def cmd_init(repo, force):
 def print_class_library():
     """Answer 'what may I declare, and where does each thing go?' from the
     tool, so the membership file's class names are never the only clue."""
-    print(f"class library version {CLASS_LIBRARY_VERSION} — list these names "
-          f'in the "classes" array of docs-corpus.json.')
-    print("Declaring a class ADMITS that location; omitting it forbids "
-          "the location entirely.\n")
+    print(f"class library version {CLASS_LIBRARY_VERSION} — the document "
+          f'locations that may appear\nin the "classes" whitelist of '
+          f"docs-corpus.json. --init writes them all;\nnarrow the "
+          f"repository by deleting the lines you do not want.\n")
     width = max(len(c["name"]) for c in CLASS_LIBRARY["classes"])
     for c in CLASS_LIBRARY["classes"]:
         print(f"  {c['name']:<{width}}  {c['summary']}")
-    print("\nEverything else in docs-corpus.json is membership: "
-          "standing_files,\nmanaged_files (root documents), managed_globs "
-          "(e.g. mod-*/README.md),\nalias_symlinks, historical_files, and "
-          "inflight_globs (root working\nrecords such as PROPOSAL-*.md).")
+    print("\nA location you do not list is forbidden, not merely unchecked.\n"
+          "\nEverything else in docs-corpus.json names files rather than "
+          "locations:\n  standing_files    documents under docs/ that fit no "
+          "location above\n  managed_files     governed documents at the "
+          "repository root\n  managed_globs     e.g. mod-*/README.md for "
+          "per-module contracts\n  alias_symlinks    symlinked duplicates, "
+          "e.g. CLAUDE.md -> AGENTS.md\n  historical_files  retired documents "
+          "kept in the tree\n  inflight_globs    root working records, e.g. "
+          "PROPOSAL-*.md")
     return 0
 
 
