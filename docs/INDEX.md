@@ -17,6 +17,7 @@ checks this index for exact agreement with the working tree.
 | NORTH-STAR.md | repository thesis, beneficiaries, success condition, non-goals, and kill criteria |
 | README.md | repository front door and product-surface map |
 | docs/INDEX.md | authoritative whole-corpus map |
+| docs/compatibility/2026-08-13-br-pin.md | br 0.1.45 pin for the one tracker operation jot-review wraps |
 | docs/history/INDEX.md | archive pointer index for retired working records |
 
 ## Aliases
