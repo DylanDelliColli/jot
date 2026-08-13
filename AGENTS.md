@@ -14,8 +14,8 @@ Jot owns the general-purpose documentation and capture machinery first proven
 in abacus. Its tools are the product, not incidental repository scripts:
 
 - `docs-doctor` governs a declared documentation corpus and its provenance;
-- the probe executor runs typed, bounded verification probes; and
-- `jot` and `jot-review` will provide the durable capture and review funnel.
+  and
+- `jot` and `jot-review` provide the durable capture and review funnel.
 
 Abacus is a consumer of Jot, not Jot's owner. Keep product code and fixtures
 consumer-neutral. Consumer-specific membership and conventions belong in that
