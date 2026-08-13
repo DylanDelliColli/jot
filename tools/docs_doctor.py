@@ -22,9 +22,10 @@ Four checks ship here:
                     no corpus path escapes the repository via a symlink
   metadata          every managed document carries a well-formed doc-meta
                     block whose role agrees with the class it belongs to
-  index-symmetry    docs/INDEX.md lists exactly the managed corpus, with
-                    well-formed managed, historical, and alias rows
-                    (the index/doc-meta agreement pass reports here too)
+  index-symmetry    docs/INDEX.md lists exactly the managed corpus, as a
+                    table of contents: | path | claim |. Role and lifecycle
+                    live in each document's own block and are never copied
+                    here, so changing one is a single-file edit
   inflight-residency  one review file per cycle, one shift report per lane
 
 Aggregate: clean | degraded | failed | execution_error. Exit 0 = clean or
@@ -74,11 +75,12 @@ DATED = (r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})"
 #
 # Version 2 renamed every class to the location it admits, so the `classes`
 # array reads as the whitelist it is without a second command. Version 3
-# moved the corpus index to docs/INDEX.md, because a repository already has
-# a governed README.md at its root and one named docs/INDEX.md could not be
-# told apart from it in a finding, a row, or a sentence. Older versions are
-# refused by the version gate.
-CLASS_LIBRARY_VERSION = "3"
+# renamed the three index files to INDEX.md, because a repository already
+# has a governed README.md at its root and one named docs/README.md could
+# not be told apart from it in a finding, a row, or a sentence. Version 4
+# reduced the corpus index to a table of contents. Older versions are
+# refused by the version gate rather than misread.
+CLASS_LIBRARY_VERSION = "4"
 CLASS_LIBRARY = {
     "classes": [
         {"name": "docs/adr", "dir": "docs/adr", "basename_regex": NUMBERED,
@@ -272,12 +274,10 @@ class Doctor:
         self.repo = os.path.realpath(repo)
         self.findings = []
         self.meta = {}          # path -> doc-meta dict (or None)
-        self.index_rows = {}    # path -> managed row cells
         self.manifest = None
         self.docs_files = {}    # relpath -> class name (docs tree)
         self.managed = []       # all managed doc relpaths needing metadata
         self.modules = []       # managed_globs matches
-        self.root_contracts = []
         self.tracked = None     # single git discovery observation
         self.unreadable = set()  # read-failed paths, one finding each
         self.docs_observed = True  # walk enumerated fully
@@ -812,9 +812,7 @@ class Doctor:
                 modules.append(rel)
         self.modules = sorted(set(modules))
         self.managed += self.modules
-        self.root_contracts = [p for p in mf["managed_files"]
-                               if self._exists(p)]
-        self.managed += self.root_contracts
+        self.managed += [p for p in mf["managed_files"] if self._exists(p)]
         # realpath confinement for every manifest-defined corpus path
         # before any read: managed, historical, and alias alike — a
         # symlinked intermediate directory can carry a lexically
@@ -840,17 +838,8 @@ class Doctor:
             meta, errors = parse_doc_meta(text)
             self.meta[rel] = meta
             if meta is None:
-                if rel in self.root_contracts:
-                    if rel in self.index_rows:
-                        self.find("metadata", rel, "-", "degraded",
-                                  "root contract without doc-meta; index row "
-                                  "is the temporary sidecar")
-                    else:
-                        self.find("metadata", rel, "-", "failed",
-                                  "no doc-meta and no sidecar index row")
-                else:
-                    self.find("metadata", rel, "-", "failed",
-                              "missing doc-meta block")
+                self.find("metadata", rel, "-", "failed",
+                          "missing doc-meta block")
                 continue
             for err in errors:
                 self.find("metadata", rel, "-", "failed",
@@ -889,9 +878,8 @@ class Doctor:
         mf = self.manifest
         historical = set(mf["historical_files"])
         aliases = set(mf["alias_symlinks"])
-        headers = (["path", "claim", "role", "lifecycle", "superseded-by"],
-                   ["path", "claim", "role", "lifecycle", "superseded-by",
-                    "source_blob", "current_homes"],
+        headers = (["path", "claim"],
+                   ["path", "claim", "source_blob", "current_homes"],
                    ["path", "alias-of"])
         for cells in rows:
             if not cells or cells in headers:
@@ -965,22 +953,19 @@ class Doctor:
                               "alias resolves outside the repository")
                 continue
             if path in historical:
-                if len(cells) != 7:
+                # a retired document has no doc-meta block in the tree, so
+                # source_blob and current_homes are its only provenance and
+                # exist nowhere else. They serve check_historical_bytes,
+                # deferred rather than rejected.
+                if len(cells) != 4:
                     self.find("index-symmetry", rel, path, "failed",
-                              "historical row needs 7 cells incl. "
-                              "source_blob, current_homes")
+                              "historical row needs | path | claim | "
+                              "source_blob | current_homes |")
                     continue
-                _, claim, role, lc, sup, blob, homes = cells
+                _, claim, blob, homes = cells
                 bad = []
                 if not claim:
                     bad.append("empty claim")
-                if role not in ROLES:
-                    bad.append(f"role {role}")
-                if lc != "historical":
-                    bad.append(f"historical row must say historical, not {lc}")
-                if sup != "-":
-                    bad.append("historical rows forbid superseded-by "
-                               "(must be -)")
                 if not HEX40_RE.fullmatch(blob):
                     bad.append("source_blob must be full 40-hex")
                 if homes != "-" and not all(
@@ -990,40 +975,21 @@ class Doctor:
                     self.find("index-symmetry", rel, path, "failed",
                               f"historical row: {b}")
                 continue
-            if len(cells) != 5:
+            # a table of contents, not a second declaration: role and
+            # lifecycle live in the document's own doc-meta block and are
+            # read from there, so changing one is a one-file edit
+            if len(cells) != 2:
                 self.find("index-symmetry", rel, path, "failed",
-                          "managed row needs | path | claim | role | "
-                          "lifecycle | superseded-by |")
+                          "managed row needs | path | claim |")
                 continue
-            _, claim, role, lc, sup = cells
+            _, claim = cells
             if path not in self.managed:
                 self.find("index-symmetry", rel, path, "failed",
                           "managed row for a file outside the managed corpus")
                 continue
-            bad = []
             if not claim:
-                bad.append("empty claim")
-            if role not in ROLES:
-                bad.append(f"role {role} not in {ROLES}")
-            if lc not in LIFECYCLES:
-                bad.append(f"lifecycle {lc} not in vocabulary")
-            if sup != "-" and not repo_rel(sup.partition("#")[0]):
-                bad.append(f"superseded-by not repo-relative: {sup}")
-            # row-level conditional coherence: the sidecar path must obey
-            # the same lifecycle/field rules as doc-meta
-            if lc in ("superseded", "partially-superseded"):
-                if sup == "-":
-                    bad.append(f"lifecycle {lc} requires a superseded-by "
-                               "target")
-            elif lc in LIFECYCLES and sup != "-":
-                bad.append(f"superseded-by forbidden for lifecycle {lc}")
-            for b in bad:
                 self.find("index-symmetry", rel, path, "failed",
-                          f"managed row: {b}")
-            if not bad:
-                self.index_rows[path] = {"claim": claim, "role": role,
-                                         "lifecycle": lc,
-                                         "superseded-by": sup}
+                          "managed row: empty claim")
         for path in self.managed:
             if path not in listed:
                 self.find("index-symmetry", path, "-", "failed",
@@ -1049,29 +1015,6 @@ class Doctor:
                 self.find("index-symmetry", rel, path, "failed",
                           "ghost: listed but absent on disk")
 
-    def check_corpus_index_agreement(self):
-        for path, row in self.index_rows.items():
-            meta = self.meta.get(path)
-            if meta is None and row["lifecycle"] == "partially-superseded":
-                # the five-cell row has no surviving-clauses cell, so a
-                # metadata-less sidecar cannot substantiate this lifecycle;
-                # it becomes legal once the in-file block exists
-                self.find("index-symmetry", path, "lifecycle", "failed",
-                          "sidecar rows cannot carry partially-superseded "
-                          "(no surviving-clauses cell)")
-                continue
-            if meta:
-                for key in ("role", "lifecycle"):
-                    if meta.get(key) and row[key] != meta[key]:
-                        self.find("index-symmetry", path, key, "failed",
-                                  f"index says {row[key]}, doc-meta says "
-                                  f"{meta[key]}")
-                doc_sup = meta.get("superseded-by", "-")
-                if (row["superseded-by"] or "-") != (doc_sup or "-"):
-                    self.find("index-symmetry", path, "superseded-by",
-                              "failed",
-                              "index/header disagreement on superseded-by")
-
     def run(self):
         if self.load_manifest():
             self.classify_docs()
@@ -1084,7 +1027,6 @@ class Doctor:
                 self.collect_managed()
                 self.check_corpus_index()
                 self.check_metadata()
-                self.check_corpus_index_agreement()
         order = {"info": 0, "degraded": 1, "failed": 2, "execution_error": 3}
         worst = max((order[f["result"]] for f in self.findings), default=0)
         aggregate = ["clean", "degraded", "failed", "execution_error"][worst]
@@ -1192,24 +1134,12 @@ def scaffold_corpus_index(repo, mem):
         return None
     doctor.collect_managed()
     index_rel = CORPUS_INDEX
-    rows = ["| path | claim | role | lifecycle | superseded-by |",
-            "|---|---|---|---|---|"]
+    rows = ["| path | claim |", "|---|---|"]
     # the index is itself a managed document; it does not exist yet, so
     # collect_managed cannot see it and it must be added by hand or the
     # first run after setup reports the scaffold as an orphan
     for path in sorted(set(doctor.managed) | {index_rel}):
-        meta, _ = parse_doc_meta(doctor._read(path) or "")
-        # a class that fixes a role wins over the file's own header: writing
-        # the wrong one here plants a disagreement that fires later, when
-        # the author adds the doc-meta block this row stands in for
-        spec = next((c for c in doctor.manifest["docs_classes"]
-                     if c["name"] == doctor.docs_files.get(path)), None)
-        role = (spec or {}).get("role") \
-            or ("contract" if path in doctor.modules else None) \
-            or (meta or {}).get("role") or "working"
-        lifecycle = (meta or {}).get("lifecycle") or "active"
-        rows.append(f"| {path} | TODO describe this document | {role} "
-                    f"| {lifecycle} | - |")
+        rows.append(f"| {path} | TODO describe this document |")
     alias_rows = []
     for alias in mem["alias_symlinks"]:
         target = os.path.normpath(os.path.join(

@@ -120,6 +120,12 @@ Every managed document starts with `doc-meta`, appears exactly once in
 adding a genre, standing file, or subdirectory requires a reviewed manifest
 change.
 
+`docs/INDEX.md` is a table of contents — `| path | claim |`. Role and
+lifecycle live in each document's own block and are never copied into it, so
+changing a document's lifecycle is a one-file edit. Do not add columns to
+restore that duplication: it bought one cross-check whose only detectable
+defect was the bookkeeping lapse it created.
+
 `docs-corpus.json` declares MEMBERSHIP only. Its `classes` array is the
 whitelist of document locations this repository admits, named by those
 locations; the class definitions themselves ship inside

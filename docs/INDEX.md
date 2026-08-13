@@ -11,13 +11,13 @@ checks this index for exact agreement with the working tree.
 
 ## Managed documents
 
-| path | claim | role | lifecycle | superseded-by |
-|---|---|---|---|---|
-| AGENTS.md | agent operating contract for this repository | contract | active | - |
-| NORTH-STAR.md | repository thesis, beneficiaries, success condition, non-goals, and kill criteria | contract | active | - |
-| README.md | repository front door and product-surface map | contract | active | - |
-| docs/INDEX.md | authoritative whole-corpus map | working | active | - |
-| docs/history/INDEX.md | archive pointer index for retired working records | working | active | - |
+| path | claim |
+|---|---|
+| AGENTS.md | agent operating contract for this repository |
+| NORTH-STAR.md | repository thesis, beneficiaries, success condition, non-goals, and kill criteria |
+| README.md | repository front door and product-surface map |
+| docs/INDEX.md | authoritative whole-corpus map |
+| docs/history/INDEX.md | archive pointer index for retired working records |
 
 ## Aliases
 

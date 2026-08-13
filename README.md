@@ -111,9 +111,14 @@ lifecycle: active
 `role` is one of `contract`, `evidence`, `working`, and must agree with the
 class the document belongs to — `--classes` shows which classes fix a role.
 `lifecycle` is one of `active`, `partially-superseded`, `superseded`,
-`withdrawn`, `parked`, `historical`. Root contracts such as `AGENTS.md` may
-run without a block, on their index row as a temporary sidecar; that reports
-`degraded` rather than `failed`.
+`withdrawn`, `parked`, `historical`. Every managed document carries its own
+block; there is no way to declare these somewhere else on its behalf.
+
+`docs/INDEX.md` is a table of contents and nothing more — `| path | claim |`.
+Role and lifecycle are read from each document, never copied into the index,
+so retiring a document is a one-file edit. The `claim` is the part that only
+you can write: one line on what that document asserts, so the index answers
+"where does X live" without opening everything.
 
 **Step 3** reprints that whitelist with a description of each location, for
 when you are narrowing it later and the file alone is not enough. Everything

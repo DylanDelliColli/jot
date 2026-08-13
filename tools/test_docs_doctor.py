@@ -140,16 +140,12 @@ NOTES_BYTES = b"legacy notes residue\n"
 
 def corpus_index_text(corpus, sup=None):
     sup = sup or {}
-    rows = ["| path | claim | role | lifecycle | superseded-by |",
-            "|---|---|---|---|---|"]
-    for path, spec in sorted(corpus.items()):
-        rows.append(f"| {path} | fixture doc | {spec['role']} | "
-                    f"{spec['lifecycle']} | {sup.get(path, '-')} |")
-    hist = ["", "| path | claim | role | lifecycle | superseded-by | "
-            "source_blob | current_homes |",
-            "|---|---|---|---|---|---|---|",
-            f"| NOTES.md | legacy notes | working | historical | - | "
-            f"{blob_id(NOTES_BYTES)} | - |"]
+    rows = ["| path | claim |", "|---|---|"]
+    for path in sorted(corpus):
+        rows.append(f"| {path} | fixture doc |")
+    hist = ["", "| path | claim | source_blob | current_homes |",
+            "|---|---|---|---|",
+            f"| NOTES.md | legacy notes | {blob_id(NOTES_BYTES)} | - |"]
     alias = ["", "| path | alias-of |", "|---|---|",
              "| CLAUDE.md | AGENTS.md |"]
     return "\n".join(rows + hist + alias) + "\n"
@@ -641,20 +637,17 @@ def _(root):
            "missing doc-meta block")
 
 
-@case("root_contract_sidecar_degraded")
+@case("root_contract_without_doc_meta_fails")
 def _(root):
+    """The index row used to stand in for a missing block on a root
+    contract. A table of contents has nothing to stand in with, so every
+    managed document carries its own."""
     write(root, "AGENTS.md", "# Agents\n\nno meta yet\n")
-    expect("root_contract_sidecar_degraded", run_doctor(root), "degraded",
-           "temporary sidecar")
-
-
-@case("root_contract_without_sidecar_fails")
-def _(root):
-    write(root, "AGENTS.md", "# Agents\n\nno meta yet\n")
-    replace(root, "docs/INDEX.md",
-            "| AGENTS.md | fixture doc | contract | active | - |\n", "")
-    expect("root_contract_without_sidecar_fails", run_doctor(root), "failed",
-           "no doc-meta and no sidecar index row")
+    expect_findings("root_contract_without_doc_meta_fails", run_doctor(root),
+                    "failed",
+                    [{"result": "failed", "reason": "missing doc-meta block",
+                      "path": "AGENTS.md", "count": 1}],
+                    absent=("sidecar",))
 
 
 @case("unknown_metadata_key")
@@ -809,19 +802,10 @@ def _(root):
            "managed row: empty claim")
 
 
-@case("corpus_row_bad_vocabulary")
-def _(root):
-    replace(root, "docs/INDEX.md",
-            "| docs/notes.md | fixture doc | working | active | - |",
-            "| docs/notes.md | fixture doc | scribe | someday | - |")
-    expect("corpus_row_bad_vocabulary", run_doctor(root), "failed",
-           "role scribe not in", "lifecycle someday not in vocabulary")
-
-
 @case("managed_row_wrong_cell_count")
 def _(root):
     replace(root, "docs/INDEX.md",
-            "| docs/notes.md | fixture doc | working | active | - |",
+            "| docs/notes.md | fixture doc |",
             "| docs/notes.md | fixture doc | working |")
     expect_findings("managed_row_wrong_cell_count", run_doctor(root), "failed",
                     [("failed", "managed row needs", 1)])
@@ -830,73 +814,9 @@ def _(root):
 @case("unmanaged_index_row")
 def _(root):
     write(root, "UNMANAGED.txt", "not a corpus file\n")
-    append(root, "docs/INDEX.md",
-           "| UNMANAGED.txt | rogue | working | active | - |\n")
+    append(root, "docs/INDEX.md", "| UNMANAGED.txt | rogue |\n")
     expect("unmanaged_index_row", run_doctor(root), "failed",
            "outside the managed corpus")
-
-
-@case("index_header_disagreement")
-def _(root):
-    replace(root, "docs/migration.md", "lifecycle: active",
-            "lifecycle: parked")
-    expect("index_header_disagreement", run_doctor(root), "failed",
-           "index says active, doc-meta says parked")
-
-
-@case("index_superseded_by_disagreement")
-def _(root):
-    def mut(corpus):
-        corpus["docs/adr/0002-second-decision.md"]["lifecycle"] = "superseded"
-    rewrite(root, sup={"docs/adr/0002-second-decision.md":
-                       "docs/adr/0001-first-decision.md"}, corpus_mut=mut)
-    replace(root, "docs/INDEX.md",
-            "| docs/adr/0002-second-decision.md | fixture doc | contract "
-            "| superseded | docs/adr/0001-first-decision.md |",
-            "| docs/adr/0002-second-decision.md | fixture doc | contract "
-            "| superseded | docs/adr/0001-first-decision.md#Decision |")
-    expect("index_superseded_by_disagreement", run_doctor(root), "failed",
-           "index/header disagreement on superseded-by")
-
-
-@case("sidecar_conditional_lifecycle_invalid")
-def _(root):
-    write(root, "AGENTS.md", "# Agents\n\nno meta\n")
-    replace(root, "docs/INDEX.md",
-            "| AGENTS.md | fixture doc | contract | active | - |",
-            "| AGENTS.md | fixture doc | contract | superseded | - |")
-    expect("sidecar_conditional_lifecycle_invalid", run_doctor(root),
-           "failed", "requires a superseded-by target")
-
-
-@case("sidecar_partial_supersession_rejected")
-def _(root):
-    write(root, "AGENTS.md", "# Agents\n\nno meta\n")
-    replace(root, "docs/INDEX.md",
-            "| AGENTS.md | fixture doc | contract | active | - |",
-            "| AGENTS.md | fixture doc | contract | partially-superseded "
-            "| docs/architecture.md |")
-    expect("sidecar_partial_supersession_rejected", run_doctor(root),
-           "failed", "sidecar rows cannot carry partially-superseded")
-
-
-@case("historical_row_wrong_lifecycle")
-def _(root):
-    replace(root, "docs/INDEX.md",
-            "| NOTES.md | legacy notes | working | historical |",
-            "| NOTES.md | legacy notes | working | active |")
-    expect("historical_row_wrong_lifecycle", run_doctor(root), "failed",
-           "historical row must say historical")
-
-
-@case("historical_row_nondash_superseded")
-def _(root):
-    replace(root, "docs/INDEX.md",
-            "| NOTES.md | legacy notes | working | historical | - |",
-            "| NOTES.md | legacy notes | working | historical "
-            "| docs/migration.md |")
-    expect("historical_row_nondash_superseded", run_doctor(root), "failed",
-           "historical rows forbid superseded-by")
 
 
 @case("historical_row_short_blob")
@@ -918,10 +838,32 @@ def _(root):
 @case("historical_file_without_row")
 def _(root):
     replace(root, "docs/INDEX.md",
-            f"| NOTES.md | legacy notes | working | historical | - "
-            f"| {blob_id(NOTES_BYTES)} | - |\n", "")
+            f"| NOTES.md | legacy notes | {blob_id(NOTES_BYTES)} | - |\n", "")
     expect("historical_file_without_row", run_doctor(root), "failed",
            "historical file without a sidecar row")
+
+
+@case("lifecycle_change_needs_no_index_edit")
+def _(root):
+    """The point of the reduction: the index is a table of contents, so
+    retiring a document is a one-file edit. Under the old five-column rows
+    this same change failed until the index was edited to match."""
+    replace(root, "docs/migration.md", "lifecycle: active",
+            "lifecycle: parked")
+    expect("lifecycle_change_needs_no_index_edit", run_doctor(root), "clean")
+
+
+@case("index_carries_no_role_or_lifecycle")
+def _(root):
+    """A row that tries to re-declare them is a wrong-shaped row, not a
+    second opinion the tool weighs against the document."""
+    replace(root, "docs/INDEX.md", "| docs/notes.md | fixture doc |",
+            "| docs/notes.md | fixture doc | working | active | - |")
+    expect_findings("index_carries_no_role_or_lifecycle", run_doctor(root),
+                    "failed",
+                    [{"result": "failed", "reason": "managed row needs",
+                      "count": 1}],
+                    absent=("doc-meta says",))
 
 
 @case("alias_target_invalid")
@@ -1103,7 +1045,9 @@ def _(root):
     repo = fresh_repo(root, "finish", COLD_START, links=[("CLAUDE.md",
                                                           "AGENTS.md")])
     init(repo)
-    for rel in ("docs/adr/0001-pick-a-db.md", "docs/architecture.md"):
+    # no sidecar any more: the root contracts need their own blocks too
+    for rel in ("docs/adr/0001-pick-a-db.md", "docs/architecture.md",
+                "README.md", "AGENTS.md"):
         with open(os.path.join(repo, rel), encoding="utf-8") as fh:
             body = fh.read()
         write(repo, rel, meta_block({"role": "contract",
@@ -1184,6 +1128,9 @@ def _(root):
         "1": ["prd", "adr", "evidence", "evidence-index", "corpus-index",
               "architecture", "archive-index", "standing"],
         "2": ["docs/adr", "docs/prd", "docs/compatibility",
+              "docs/compatibility/README.md", "docs/README.md",
+              "docs/architecture.md", "docs/history/README.md"],
+        "3": ["docs/adr", "docs/prd", "docs/compatibility",
               "docs/compatibility/INDEX.md", "docs/INDEX.md",
               "docs/architecture.md", "docs/history/INDEX.md"],
     }
