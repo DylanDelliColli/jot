@@ -15,6 +15,7 @@ with document additions and retirements as described in `AGENTS.md`.
 | AGENTS.md | agent operating contract for this repository |
 | NORTH-STAR.md | repository thesis, beneficiaries, success condition, non-goals, and kill criteria |
 | README.md | repository front door and product-surface map |
+| REVIEW-readme.md | current review of the human-facing README and installation steps |
 | docs/INDEX.md | authoritative whole-corpus map |
 | docs/compatibility/2026-08-13-br-pin.md | br 0.1.45 pin for the one tracker operation jot-review wraps |
 | docs/history/INDEX.md | archive pointer index for retired working records |

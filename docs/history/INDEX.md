@@ -23,3 +23,7 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | REVIEW-docs-doctor-removal.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | 31e4f9a2954ec36ca4db53616fca2bf6852341cc | Accepted Claude cross-lineage review of jot-310; no removal defect remained. |
 | docs/INDEX.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | ffdf3ee25890602fccaca9580e1dd363a004de77 | Index state before archiving the accepted jot-310 review. |
 | docs/history/INDEX.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | d4e7eaad68da3fb871e8b9cf6376bbed1c88034c | Index state before archiving the accepted jot-310 review. |
+| README.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | 66449b2af4f5739d949ac64a3a14f132f6b59141 | State before the human-facing README rewrite in jot-f7f. |
+| AGENTS.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | dab28cb972dc0565d800b288f21d8aa5edd28a0c | State before the human-facing README rewrite in jot-f7f. |
+| docs/INDEX.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | 40c26c788e4f877c85c7db1f527a8fc841255cee | State before the human-facing README rewrite in jot-f7f. |
+| docs/history/INDEX.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | 90286a0165b2fbbc47785c1e03481ddf0b787f81 | State before the human-facing README rewrite in jot-f7f. |

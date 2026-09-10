@@ -127,7 +127,8 @@ overwrites it at handoff under the guard.
 Root contracts, review and shift reports, and documents under `docs/` start
 with `doc-meta` and appear exactly once in `docs/INDEX.md`. Skill files use
 their own front matter. Consumers choose their own documentation structure
-and checks.
+and checks. `README.md` may wrap its opening `doc-meta` block in an HTML
+comment so GitHub renders the reader-facing introduction first.
 
 `docs/INDEX.md` is a table of contents — `| path | claim |`. Role and
 lifecycle live in each document's own block and are never copied into it.
