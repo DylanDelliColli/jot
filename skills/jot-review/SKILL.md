@@ -106,18 +106,9 @@ bead must stand on its own: if it cannot be acted on without its note, the
 bead is not finished. Promotion **is** the durability mechanism, which is why
 a note can be thrown away the moment its bead exists.
 
-**DOC** — apply the edit, then **run docs-doctor and report the result**:
-
-```bash
-docs-doctor --repo . --json
-```
-
-If the repository has no `docs-corpus.json`, docs-doctor is not set up there —
-say so rather than running `--init` as a side effect of curating a note.
-
-A documentation change that has not been checked is not finished. `failed` or
-`execution_error` must be resolved before the pass ends; `degraded` is
-acceptable only if every finding is accounted for.
+**DOC** — apply the approved edit and follow the receiving repository's
+instructions for documentation changes, including any required checks.
+Report what changed and the validation performed.
 
 **DISCARD** — no action beyond archiving.
 
@@ -132,8 +123,7 @@ mechanism.**
 ### 7. Report
 
 How many notes reviewed, how many discarded, which beads were filed with their
-ids, which documents changed, and the docs-doctor result if any document
-changed.
+ids, which documents changed, and any validation performed.
 
 ## Honesty rules
 

@@ -24,9 +24,8 @@ Jot is succeeding when its consuming repositories:
 
 - avoid ad hoc markdown-soup folders;
 - update governed documentation as the product evolves;
-- capture issues quickly through `jot`;
-- regularly curate captured issues through `jot-review`; and
-- consistently honor the structure enforced by docs-doctor.
+- capture issues quickly through `jot`; and
+- regularly curate captured issues through `jot-review`.
 
 Implementation scope and working rules remain governed by
 [AGENTS.md](AGENTS.md) and active `br` beads.
@@ -52,15 +51,14 @@ Scope boundaries — things Jot could plausibly grow into and will not:
 
 8. **A query or index layer over pending notes.** Notes are read at review, then promoted or deleted. Nothing searches, ranks, links, or retains them for later reference.
 
-9. **A canonical documentation structure that repositories must adopt.** docs-doctor enforces the structure a repository *declares* — the enforcement is real, the declaration is the repository's. The shipped default is the maximum; reducing it is commenting lines out of a list.
+9. **Enforcing a documentation schema.** Consuming repositories own their documentation structure and validation conventions.
 
 ## Kill criteria
 
 Stop or pivot rather than add machinery if real use shows that:
 
-- `jot-review` is not being used;
-- Jot's captured output becomes another markdown-soup backlog; or
-- agents routinely ignore the documentation structure enforced by docs-doctor.
+- `jot-review` is not being used; or
+- Jot's captured output becomes another markdown-soup backlog.
 
 These are product-level failures to address from observed evidence, not
 invitations to build speculative safeguards.

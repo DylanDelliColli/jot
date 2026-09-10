@@ -10,16 +10,12 @@ Instructions for every Claude or Codex session working in this repository.
 
 ## What this repository is
 
-Jot owns the general-purpose documentation and capture machinery first proven
-in abacus. Its tools are the product, not incidental repository scripts:
-
-- `docs-doctor` governs a declared documentation corpus and its provenance;
-  and
-- `jot` and `jot-review` provide the durable capture and review funnel.
+Jot owns the durable capture and review funnel first proven in abacus.
+Its products are the `jot` command and the `jot-review` curation skill.
 
 Abacus is a consumer of Jot, not Jot's owner. Keep product code and fixtures
-consumer-neutral. Consumer-specific membership and conventions belong in that
-consumer's configuration, not in Jot's implementation.
+consumer-neutral. Consumer-specific conventions belong in that consumer's
+configuration, not in Jot's implementation.
 
 ## MVP first, fix as we use
 
@@ -59,7 +55,9 @@ matrix for opening and using the product.
 
 - Use `br` for every work item in this repository. IDs use the lowercase
   `jot-` prefix. Start with `br ready`, inspect the bead, and claim it before
-  changing the tree.
+  changing the tree. This checkout uses `br` 0.1.45. On this host, invoke
+  `~/.local/bin/br-0.1.45` while the default `br` requires a newer database
+  schema; do not migrate the tracker as a side effect of product work.
 - Never use `bd` or `sable-note` here. Do not invoke other legacy SABLE
   workflow machinery for Jot work.
 - Capture what you notice but are not acting on with `jot "<observation>"`,
@@ -126,60 +124,27 @@ last-containing coordinate and delete the review file under the same guard.
 Each lane likewise keeps at most one current root-level shift report and
 overwrites it at handoff under the guard.
 
-Every managed document starts with `doc-meta`, appears exactly once in
-`docs/INDEX.md`, and obeys `docs-corpus.json`. The `docs/` tree is closed:
-adding a genre, standing file, or subdirectory requires a reviewed manifest
-change.
+Root contracts, review and shift reports, and documents under `docs/` start
+with `doc-meta` and appear exactly once in `docs/INDEX.md`. Skill files use
+their own front matter. Consumers choose their own documentation structure
+and checks.
 
 `docs/INDEX.md` is a table of contents — `| path | claim |`. Role and
-lifecycle live in each document's own block and are never copied into it, so
-changing a document's lifecycle is a one-file edit. Do not add columns to
-restore that duplication: it bought one cross-check whose only detectable
-defect was the bookkeeping lapse it created.
+lifecycle live in each document's own block and are never copied into it.
 
-`docs-corpus.json` declares MEMBERSHIP only. Its `classes` array is the
-whitelist of document locations this repository admits, named by those
-locations; the class definitions themselves ship inside
-`tools/docs_doctor.py` and are the maximum, never a structure to adopt.
-`docs-doctor --repo . --init` writes the whole whitelist and narrowing is
-deleting lines from it — a location not listed is forbidden, not merely
-unchecked, which is what makes admitting a new genre a reviewed edit. Do not
-put a class definition back into `docs-corpus.json`; the membership validator
-rejects keys no consumer reads. `conforms_to` names the class-library version
-the file was written against and is refused if this tool does not implement
-it.
+## Verification
 
-Run docs-doctor before a push, at phase gates, and at session close, from
-this repository's root:
+Run the capture suite before pushing changes to Jot's capture or review
+workflow:
 
 ```sh
-python3 tools/docs_doctor.py --repo . --json
-python3 tools/test_docs_doctor.py    # the fixture suite, before touching the tool
+python3 tools/test_jot.py
 ```
 
-The tool enforces the structure this repository *declares*: four checks —
-docs-structure, metadata, index-symmetry, and inflight-residency — plus the
-manifest gate and path confinement they need. Seven further checks and the
-probe executor are deferred, not rejected; they remain in the frozen
-`abacus-v1` parts bin and return only by being ported here against an
-observed need. Do not reach into that tree to run a check jot has not
-adopted.
-
-`failed` and `execution_error` block landing. A `degraded` result is allowed
-only when every finding is accounted for — traceable to an open bead or to a
-recorded decision; never call it clean. Never edit a record to silence a
-finding. The deferred `reverse-citations` check made the cost visible: it
-flags any mention of a filename, including a closed bead explaining why that
-file will never exist here, and twice the resolution taken was to reword the
-tracker rather than the tree. A record edited to quiet a tool is a record
-corrupted to flatter it, and that holds for whichever check is running.
-
-Record the run on the bead you are landing, not in a table. This check is
-instant and deterministic, so current state is obtained by running it — a
-maintained copy of its output is a cache of a cheap computation, and unlike
-the tool the cache can be wrong. Expensive, non-reproducible observations
-such as a live provider capture or a concurrency pilot are the opposite
-case and do belong in a checked-in record.
+It exercises real filesystems and Git repositories, including linked
+worktrees. Check review-skill edits against the capture format and the
+receiving repository's instructions. Record validation on the bead being
+landed. Expensive observations from real use belong in a checked-in record.
 
 ## Cross-lineage review lane
 

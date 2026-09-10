@@ -59,13 +59,13 @@ def notes_in(repo):
 
 def test_capture_writes_every_automatic_field(root):
     repo = make_repo(os.path.join(root, "auto"))
-    code, out, _ = run(["docs-doctor exits 0 on a degraded corpus"], repo)
+    code, out, _ = run(["the build reports success after skipping a required input"], repo)
     written = notes_in(repo)
     note = written[0] if written else {}
     check("capture.exit_zero", code == 0, f"code={code} out={out!r}")
     check("capture.one_file_per_note", len(written) == 1, f"count={len(written)}")
     check("capture.text_verbatim",
-          note.get("text") == "docs-doctor exits 0 on a degraded corpus", note.get("text"))
+          note.get("text") == "the build reports success after skipping a required input", note.get("text"))
     check("capture.has_automatic_fields",
           all(note.get(f) for f in ("id", "created_at", "cwd", "branch", "rev")),
           {f: note.get(f) for f in ("id", "created_at", "cwd", "branch", "rev")})
