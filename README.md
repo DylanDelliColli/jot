@@ -8,8 +8,8 @@ lifecycle: active
 <h1 align="center">jot</h1>
 
 <p align="center">
-  <strong>Notice it. Jot it. Keep going.</strong><br>
-  A small capture-and-review tool for developers and their coding agents.
+  <strong>From agent findings to actionable tasks.</strong><br>
+  Structured capture and review for agentic development.
 </p>
 
 <p align="center">
@@ -27,27 +27,32 @@ lifecycle: active
 
 ---
 
-You spot a flaky test while fixing something else. Your coding agent notices a
-stale setup guide halfway through a task. Capture the observation and keep
-working; decide what deserves attention when you're ready to review.
+Jot lets agents quickly record structured findings while executing tasks or
+having conversations with the operator. Later, the agent uses `jot-review` to
+parse those notes, check the evidence, and turn relevant findings into actionable
+tasks for the operator to approve.
+
+An agent can capture a finding in one command:
 
 ```sh
 jot "The setup guide references a removed command" --file README.md
 ```
 
-**Capture now → review later → keep what matters.**
+**Agent findings → structured Jot notes → review → actionable tasks.**
 
-- **Context comes along.** Jot records the time, branch, commit, and working
-  directory automatically. Add a file, symptom, or reproduction when useful.
-- **Notes follow the repository.** Each repo gets its own queue, shared across
-  its Git worktrees. Removing a linked worktree leaves the notes intact.
-- **You control the backlog.** The optional review skill checks observations
-  and proposes follow-up work or documentation edits. You approve what becomes work.
+- **Structured for agents to parse.** Each note is a JSON record. Jot captures
+  the time, branch, commit, and working directory automatically.
+- **Evidence stays with the finding.** The agent can include the affected file,
+  symptom, reproduction steps, and why the finding matters.
+- **Tasks another agent can act on.** During review, the agent checks findings
+  and drafts tasks with the context needed to pick them up later. The operator
+  approves what becomes work.
 
 ## Install
 
 You'll need **Python 3.7 or newer**, **Git**, and a shell on Linux, macOS, or WSL.
-Capture uses only the Python standard library and runs without an AI service.
+The capture command uses only the Python standard library. Install it below,
+then [set up the review skill](#review-with-your-agent) for your agent.
 
 ```sh
 git clone https://github.com/DylanDelliColli/jot.git
@@ -72,13 +77,14 @@ it before replacing it. To update an existing installation, run
 
 ## Usage
 
-Switch to the Git repository you're working on, then capture a note:
+Agents run `jot` from the Git repository they are working in. During execution,
+a quick finding can be captured as:
 
 ```sh
 jot "The setup guide references a removed command"
 ```
 
-Give a future reviewer enough context to follow up:
+For a finding that needs more context, the agent can record supporting evidence:
 
 ```sh
 jot "The setup guide references a removed command" \
@@ -88,9 +94,16 @@ jot "The setup guide references a removed command" \
   --why "New contributors cannot finish setup"
 ```
 
+Findings from conversations with the operator use the same format:
+
+```sh
+jot "The operator needs exports to include archived projects" \
+  --why "Monthly reporting must account for completed work"
+```
+
 | Command | What it does |
 | --- | --- |
-| `jot "something worth remembering"` | Save an observation in this repository |
+| `jot "a finding to follow up"` | Save a structured finding in this repository |
 | `jot list` | Show pending notes, oldest first |
 | `jot dir` | Print the queue's filesystem path |
 | `jot --help` | Show capture options |
@@ -100,9 +113,10 @@ capture keeps working and no review starts automatically.
 
 ## Review with your agent
 
-`jot-review` is an optional skill for **Codex** and **Claude Code**. It reads
-your queue, checks whether each observation still holds, and helps you decide
-what to do with it.
+`jot-review` is the review stage of the workflow, provided as a skill for
+**Codex** and **Claude Code**. When the operator requests a review, the agent
+reads the structured notes, checks each finding against the current repository,
+and develops the findings worth pursuing into actionable tasks.
 
 ### Install the skill
 
@@ -135,33 +149,35 @@ Start a new agent session in the repository whose notes you want to review
 and ask it to use the `jot-review` skill:
 
 ```text
-Use jot-review to review my pending notes.
+Use jot-review to turn the pending findings into actionable tasks for me to approve.
 ```
 
 ### What a review does
 
 1. **Checks the evidence.** Is the observation still true? Is it already fixed
    or tracked?
-2. **Proposes a disposition.** Discard it, create a bead, update documentation,
-   or discuss it with you.
+2. **Drafts actionable tasks.** Findings that warrant work become proposed
+   beads with enough context for another agent to act on. The agent can also
+   propose a documentation edit, discard stale notes, or discuss an open question.
 3. **Applies your decisions.** New beads and documentation edits require your
    approval. The agent may discard noise on its own and lists its discards
    so you can rescue anything worth keeping.
 4. **Clears the pending queue.** Processed notes move into a `processed/`
-   subdirectory. Useful context belongs in the issue or document it becomes.
+   subdirectory. The useful context now lives in the approved task or document.
 
 Review runs when you ask. The default is to discard observations that no longer
 justify action, so capturing freely doesn't commit you to an ever-growing backlog.
 
 <details>
-<summary><strong>Let your coding agent capture observations</strong></summary>
+<summary><strong>Give your agent capture instructions</strong></summary>
 
 Add a short instruction to your project's `AGENTS.md` or `CLAUDE.md`:
 
 ```text
-When you notice something outside the current task, capture it with jot.
+Use jot to capture findings for later follow-up during execution and our conversations.
 Include --file, --symptom, --repro, and --why when useful.
-Only run jot-review when I ask.
+Write notes with enough context to become actionable tasks during review.
+Only run jot-review when I ask. Get my approval before creating tasks or editing docs.
 ```
 
 The agent needs `jot` on its PATH and permission to write to the repository's

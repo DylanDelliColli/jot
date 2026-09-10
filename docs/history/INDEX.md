@@ -30,3 +30,5 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | REVIEW-readme.md | 8dae673a1a35b81713da43991c8e634f550155dd | 68023305910cd0518cf0ea942d321317a134fa2c | Accepted Claude review of the GitHub README, with installation and rendering evidence for jot-f7f. |
 | docs/INDEX.md | 8dae673a1a35b81713da43991c8e634f550155dd | 8297ce5018060449bca21dd199f74c9f344e21cb | Index state before archiving the accepted jot-f7f review. |
 | docs/history/INDEX.md | 8dae673a1a35b81713da43991c8e634f550155dd | c00496287bedc935e8a9552d72eaebfb8dd63f11 | Index state before archiving the accepted jot-f7f review. |
+| README.md | 339772812a83ff40d656f85b085d1916a0526bc6 | b88db219703d62637b2c101fba77df178997e0df | State before the operator-corrected agentic-development framing in jot-f7f. |
+| docs/history/INDEX.md | 339772812a83ff40d656f85b085d1916a0526bc6 | 118942de9da282194a79cbcff6404c557b5b8f4a | State before the operator-corrected agentic-development framing in jot-f7f. |
