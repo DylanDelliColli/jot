@@ -20,3 +20,6 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | docs/history/INDEX.md | acbd673d6b7f51919434e08171d71e6b296cfcda | 119afdc3407effe629c831d3d23d8580ba00396b | State before docs-doctor removal in jot-310. |
 | skills/jot-review/SKILL.md | acbd673d6b7f51919434e08171d71e6b296cfcda | a7625aad6155fe453178e4394d9eeb3a4f630e19 | State before docs-doctor removal in jot-310. |
 | docs-corpus.json | acbd673d6b7f51919434e08171d71e6b296cfcda | e6634cf7e022d58d31e94245fcfe5b2c3ccea22f | State before docs-doctor removal in jot-310. |
+| REVIEW-docs-doctor-removal.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | 31e4f9a2954ec36ca4db53616fca2bf6852341cc | Accepted Claude cross-lineage review of jot-310; no removal defect remained. |
+| docs/INDEX.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | ffdf3ee25890602fccaca9580e1dd363a004de77 | Index state before archiving the accepted jot-310 review. |
+| docs/history/INDEX.md | 0a7d48154b5c0e47981c6683ac77b36d2a9ef220 | d4e7eaad68da3fb871e8b9cf6376bbed1c88034c | Index state before archiving the accepted jot-310 review. |
