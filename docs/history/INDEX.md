@@ -27,3 +27,6 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | AGENTS.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | dab28cb972dc0565d800b288f21d8aa5edd28a0c | State before the human-facing README rewrite in jot-f7f. |
 | docs/INDEX.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | 40c26c788e4f877c85c7db1f527a8fc841255cee | State before the human-facing README rewrite in jot-f7f. |
 | docs/history/INDEX.md | 7abdd5800f113260b9daa0fa2e2f97ab90ba4f4a | 90286a0165b2fbbc47785c1e03481ddf0b787f81 | State before the human-facing README rewrite in jot-f7f. |
+| REVIEW-readme.md | 8dae673a1a35b81713da43991c8e634f550155dd | 68023305910cd0518cf0ea942d321317a134fa2c | Accepted Claude review of the GitHub README, with installation and rendering evidence for jot-f7f. |
+| docs/INDEX.md | 8dae673a1a35b81713da43991c8e634f550155dd | 8297ce5018060449bca21dd199f74c9f344e21cb | Index state before archiving the accepted jot-f7f review. |
+| docs/history/INDEX.md | 8dae673a1a35b81713da43991c8e634f550155dd | c00496287bedc935e8a9552d72eaebfb8dd63f11 | Index state before archiving the accepted jot-f7f review. |
