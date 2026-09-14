@@ -40,3 +40,6 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | README.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | fe2608fda203d0cc1bfa1b77b18a656185d23dd6 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
 | REVIEW-v1.1.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | 7b7547539a8e97adc5731f86d94718c30c8dc987 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
 | docs/history/INDEX.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | e8bcf95a648ac3e36347714f32a53ab9a5e24084 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
+| REVIEW-v1.1.md | de9f4630b228a4c6fd4e3d50c538cd26238ef1ff | e17585e7cb745d4705307a1e32cb85204c301014 | Completed v1.1 review before archive after PR 1 merge and local install in jot-rvt. |
+| docs/INDEX.md | de9f4630b228a4c6fd4e3d50c538cd26238ef1ff | 6140fb0cfbb922cd50de6db46d0dd609d2c710c6 | Index before retiring the completed v1.1 review in jot-rvt. |
+| docs/history/INDEX.md | de9f4630b228a4c6fd4e3d50c538cd26238ef1ff | f67207497bc72258afb94dd0b0f043482cc658a7 | Archive index before adding the completed v1.1 review coordinates in jot-rvt. |
