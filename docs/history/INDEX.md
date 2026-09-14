@@ -32,3 +32,8 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | docs/history/INDEX.md | 8dae673a1a35b81713da43991c8e634f550155dd | c00496287bedc935e8a9552d72eaebfb8dd63f11 | Index state before archiving the accepted jot-f7f review. |
 | README.md | 339772812a83ff40d656f85b085d1916a0526bc6 | b88db219703d62637b2c101fba77df178997e0df | State before the operator-corrected agentic-development framing in jot-f7f. |
 | docs/history/INDEX.md | 339772812a83ff40d656f85b085d1916a0526bc6 | 118942de9da282194a79cbcff6404c557b5b8f4a | State before the operator-corrected agentic-development framing in jot-f7f. |
+| AGENTS.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | 7c4bef6faee253f1cf7e59a30a4d72577a76460e | State before the authorized v1.1.0 memory extension in jot-6ab. |
+| NORTH-STAR.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | d9461941376cdf089b764521be7172176034a5d1 | State before the authorized v1.1.0 memory extension in jot-6ab. |
+| README.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | e9dd6ae875bd0f16cb0b0383503cba94e2e586a2 | State before the authorized v1.1.0 memory extension in jot-6ab. |
+| docs/INDEX.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | 40c26c788e4f877c85c7db1f527a8fc841255cee | State before the authorized v1.1.0 memory extension in jot-6ab. |
+| docs/history/INDEX.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | 0209261a8f8628a12d1de2edda33e71492a1f56a | State before the authorized v1.1.0 memory extension in jot-6ab. |
