@@ -9,7 +9,7 @@ lifecycle: active
 
 <p align="center">
   <strong>From agent findings to actionable tasks.</strong><br>
-  Structured capture and review for agentic development.
+  Structured capture, review, and reusable memory for development.
 </p>
 
 <p align="center">
@@ -22,6 +22,7 @@ lifecycle: active
   <a href="#install">Install</a> ·
   <a href="#usage">Usage</a> ·
   <a href="#review-with-your-agent">Agent review</a> ·
+  <a href="#memory">Memory</a> ·
   <a href="#contributing">Contributing</a>
 </p>
 
@@ -30,7 +31,9 @@ lifecycle: active
 Jot lets agents quickly record structured findings while executing tasks or
 having conversations with the operator. Later, the agent uses `jot-review` to
 parse those notes, check the evidence, and turn relevant findings into actionable
-tasks for the operator to approve.
+tasks for the operator to approve. The optional memory flow captures lessons
+separately, lets an agent study them without operator input, and retrieves
+only the cleaned results.
 
 An agent can capture a finding in one command:
 
@@ -111,6 +114,15 @@ jot "The operator needs exports to include archived projects" \
 All four context flags are optional. At 20 pending notes, Jot suggests a review;
 capture keeps working and no review starts automatically.
 
+The first words `list`, `dir`, `memory`, `study`, and `remember` select commands.
+For generated or unquoted discovery text, use `jot -- "<observation>"` so a
+finding such as "remember to update the docs" is captured literally. Put any
+evidence flags before `--`, for example:
+
+```sh
+jot --file README.md -- "remember to update the docs before release"
+```
+
 ## Review with your agent
 
 `jot-review` is the review stage of the workflow, provided as a skill for
@@ -174,8 +186,8 @@ justify action, so capturing freely doesn't commit you to an ever-growing backlo
 Add a short instruction to your project's `AGENTS.md` or `CLAUDE.md`:
 
 ```text
-Use jot to capture findings for later follow-up during execution and our conversations.
-Include --file, --symptom, --repro, and --why when useful.
+Use jot -- "<observation>" to capture findings for later follow-up during execution and our conversations.
+Include --file, --symptom, --repro, and --why before the -- separator when useful.
 Write notes with enough context to become actionable tasks during review.
 Only run jot-review when I ask. Get my approval before creating tasks or editing docs.
 ```
@@ -185,6 +197,76 @@ Git directory.
 
 </details>
 
+## Memory
+
+Memory is optional and works without a tracker, agent name, or orchestration
+framework. Use the existing discovery queue for findings that may become work;
+use memory for knowledge worth carrying into a future session.
+
+```sh
+jot memory "Restoring saved state did not refresh the next recommendation"
+jot study
+jot remember "restoring"
+```
+
+`jot study` prints the bundled study instructions and the current rough notes
+and cleaned bank. The agent running the command then performs the study: it
+checks useful claims, saves or revises lessons, and deletes notes it has
+consumed. Jot itself does not launch a model. A human running the command sees
+the same material and can use the record operations directly.
+
+`remember` returns **only cleaned memories**, never rough notes. With no query,
+it lists the selected bank; with a query, it performs a case-insensitive text
+search. Notes do not become memories just because they were captured.
+
+| Command | What it does |
+| --- | --- |
+| `jot memory "rough observation"` | Capture a rough memory note (`--add` is optional) |
+| `jot memory --list` | Read rough notes |
+| `jot study` | Start an agent-directed study using the bundled instructions |
+| `jot study --json` | Read scoped rough notes and cleaned memories as JSON |
+| `jot study --save "useful lesson"` | Save a cleaned memory after studying |
+| `jot study --save "revised lesson" --id ID` | Replace an existing memory's text |
+| `jot memory --delete ID` | Delete a rough note |
+| `jot study --delete ID` | Delete a cleaned memory |
+| `jot remember "search text"` | Retrieve matching cleaned memories |
+
+Memory commands support `--json` and `--help`. Records include IDs, timestamps,
+text, and repository context. Save operations return the resulting record or
+its ID. Revision preserves the ID and creation time and updates the text,
+repository context, and `updated_at`. Delete acts on one record in the selected
+scope; there is no memory archive or undo command. Save useful lessons before
+deleting the rough notes they replace.
+
+### Optional agent scopes
+
+Memory selects `--agent NAME` first, otherwise `JOT_AGENT`, otherwise the
+repository-general collection. An agent scope selects exactly that agent's
+records. Identity affects memory only; ordinary `jot "finding"`, `list`, `dir`,
+and operator-directed `jot-review` keep their existing behavior.
+
+```sh
+JOT_AGENT=a jot memory "A lesson to study later"
+JOT_AGENT=a jot study
+JOT_AGENT=a jot remember "lesson"
+jot remember --agent b "lesson"
+jot remember --agent ""          # repository-general, even with JOT_AGENT set
+jot remember --all-agents        # every scope in this repository
+```
+
+Set `JOT_AGENT` in an agent's launch environment to omit the flag during normal
+work. `--agent ""` also selects general scope for writes. `--all-agents` is a
+read option for `remember`, `memory --list`, and `study`; writes and deletes
+always select one scope. Attribution is a convention, not an access-control
+boundary. Each repository has its own records, shared by its linked worktrees.
+
+The bundled `skills/jot-study/SKILL.md` is the sole source of study instructions.
+`jot study` loads it directly from the Jot checkout; no additional skill install
+is required for that entrypoint. For discovery as `/jot-study` in your agent,
+optionally link `skills/jot-study` using the same installation pattern as
+`jot-review` above. Study maintains memories autonomously. It does not run
+`jot-review`, create tasks, or edit documentation.
+
 ## Where notes live
 
 Notes are plain JSON files under `<git-common-dir>/jot/pending/` — usually
@@ -193,6 +275,18 @@ and aren't included in Git pushes.
 
 Worktrees of the same clone share a queue. Separate clones and machines have
 separate queues. Use `jot dir` to find yours.
+
+Memory is stored alongside the queue in `<git-common-dir>/jot/memory/rough/`
+and `bank/`, one JSON file per record. Memory survives agent resets and linked
+worktree teardown. It remains local to the clone: Git pushes do not back it up,
+and deleting the clone also deletes its memory.
+
+If a memory JSON record is malformed, reads of that collection stop and name
+the damaged file, including reads of other agent scopes in that collection.
+Inspect the exact file reported and repair its JSON, or remove that file if it
+is no longer useful. CLI deletion also validates a record's identity and scope,
+so it cannot delete an unreadable record for you. This differs from discovery
+listing, which continues with an unreadable-note placeholder.
 
 ## Contributing
 
@@ -204,6 +298,7 @@ the checkout root:
 
 ```sh
 python3 tools/test_jot.py
+python3 tools/test_memory.py
 ```
 
 The suite uses real filesystems and Git repositories, including linked worktrees.

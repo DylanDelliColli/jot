@@ -11,9 +11,10 @@ Instructions for every Claude or Codex session working in this repository.
 ## What this repository is
 
 Jot owns the durable capture and review funnel first proven in abacus.
-Its products are the `jot` command and the `jot-review` curation skill.
+Its products are the `jot` command, the operator-directed `jot-review`
+curation skill, and autonomous `jot-study` for repository memory.
 
-Abacus is a consumer of Jot, not Jot's owner. Keep product code and fixtures
+Abacus and Alleyoop are consumers of Jot, not Jot's owners. Keep product code and fixtures
 consumer-neutral. Consumer-specific conventions belong in that consumer's
 configuration, not in Jot's implementation.
 
@@ -38,7 +39,16 @@ bead's stated scope and acceptance criteria are authoritative for what gets
 built now. When a design document is broader, implement only the bead and do
 not infer the remainder as required work.
 
-For the capture funnel, `jot-met.7` is the implementation authority: MVP scope
+For v1.1.0, `jot-6ab` is the authorized memory scope: JSON rough notes,
+autonomous study into cleaned memories, cleaned-only recall, revision and
+deletion. Agent identity is optional; memory defaults to an explicit `--agent`,
+then `JOT_AGENT`, otherwise repository-general. Existing capture/list/dir and
+operator-directed discovery review remain compatible. No memory service,
+indexing, cross-machine sync, Markdown memory, or automatic discovery review.
+Memory curation uses the running agent through `jot-study`; it needs no
+operator approval and never creates work or edits documentation.
+
+For the original capture funnel, `jot-met.7` was the implementation authority: MVP scope
 is sable-note and sable-review parity plus only the cheap improvements named in
 that bead. The v20 funnel design's event fold, publish protocol,
 two-observation gate, patch artifacts, attempt state machine, reconciliation,
@@ -62,7 +72,7 @@ matrix for opening and using the product.
   workflow machinery for Jot work.
 - Capture what you notice but are not acting on with `jot "<observation>"`,
   with `--file`, `--symptom`, `--repro` and `--why` where you have them.
-  Curate with `jot-review`, which is **operator-invoked only** — never on a
+  Curate discoveries with `jot-review`, which is **operator-invoked only** — never on a
   schedule, a hook, or at session close. A blocking defect is the carve-out:
   bead it immediately rather than capturing it.
   Both lineages invoke it as `/jot-review`. It installs once, into the
@@ -140,6 +150,7 @@ workflow:
 
 ```sh
 python3 tools/test_jot.py
+python3 tools/test_memory.py
 ```
 
 It exercises real filesystems and Git repositories, including linked
@@ -148,6 +159,12 @@ receiving repository's instructions. Record validation on the bead being
 landed. Expensive observations from real use belong in a checked-in record.
 
 ## Cross-lineage review lane
+
+**v1.1.0 arrangement (operator, 2026-09-14):** Codex in Herdr `w9X:p2`
+and Claude in `w9X:p1` are authorized to build and cross-review the memory
+extension. Each writer uses its own checkout. This pairing supersedes the
+older pane reference below for `jot-6ab`. Inspect live identities before
+using any saved pane reference.
 
 **Confirmed arrangement (operator, 2026-08-12):** the Codex build lane in this
 repository pairs with the Claude adversarial-review lane in tmux pane
