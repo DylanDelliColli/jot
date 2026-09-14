@@ -114,6 +114,15 @@ jot "The operator needs exports to include archived projects" \
 All four context flags are optional. At 20 pending notes, Jot suggests a review;
 capture keeps working and no review starts automatically.
 
+The first words `list`, `dir`, `memory`, `study`, and `remember` select commands.
+For generated or unquoted discovery text, use `jot -- "<observation>"` so a
+finding such as "remember to update the docs" is captured literally. Put any
+evidence flags before `--`, for example:
+
+```sh
+jot --file README.md -- "remember to update the docs before release"
+```
+
 ## Review with your agent
 
 `jot-review` is the review stage of the workflow, provided as a skill for
@@ -177,8 +186,8 @@ justify action, so capturing freely doesn't commit you to an ever-growing backlo
 Add a short instruction to your project's `AGENTS.md` or `CLAUDE.md`:
 
 ```text
-Use jot to capture findings for later follow-up during execution and our conversations.
-Include --file, --symptom, --repro, and --why when useful.
+Use jot -- "<observation>" to capture findings for later follow-up during execution and our conversations.
+Include --file, --symptom, --repro, and --why before the -- separator when useful.
 Write notes with enough context to become actionable tasks during review.
 Only run jot-review when I ask. Get my approval before creating tasks or editing docs.
 ```
@@ -258,9 +267,6 @@ optionally link `skills/jot-study` using the same installation pattern as
 `jot-review` above. Study maintains memories autonomously. It does not run
 `jot-review`, create tasks, or edit documentation.
 
-The first words `memory`, `study`, and `remember` now select commands. To capture
-one of those literal words as an ordinary discovery, use `jot -- memory`.
-
 ## Where notes live
 
 Notes are plain JSON files under `<git-common-dir>/jot/pending/` — usually
@@ -274,6 +280,13 @@ Memory is stored alongside the queue in `<git-common-dir>/jot/memory/rough/`
 and `bank/`, one JSON file per record. Memory survives agent resets and linked
 worktree teardown. It remains local to the clone: Git pushes do not back it up,
 and deleting the clone also deletes its memory.
+
+If a memory JSON record is malformed, reads of that collection stop and name
+the damaged file, including reads of other agent scopes in that collection.
+Inspect the exact file reported and repair its JSON, or remove that file if it
+is no longer useful. CLI deletion also validates a record's identity and scope,
+so it cannot delete an unreadable record for you. This differs from discovery
+listing, which continues with an unreadable-note placeholder.
 
 ## Contributing
 

@@ -37,3 +37,6 @@ coordinate. This index is intentionally the only file under `docs/history/`.
 | README.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | e9dd6ae875bd0f16cb0b0383503cba94e2e586a2 | State before the authorized v1.1.0 memory extension in jot-6ab. |
 | docs/INDEX.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | 40c26c788e4f877c85c7db1f527a8fc841255cee | State before the authorized v1.1.0 memory extension in jot-6ab. |
 | docs/history/INDEX.md | 47693ce8eff9e74cee72439b9bf3be2bee601230 | 0209261a8f8628a12d1de2edda33e71492a1f56a | State before the authorized v1.1.0 memory extension in jot-6ab. |
+| README.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | fe2608fda203d0cc1bfa1b77b18a656185d23dd6 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
+| REVIEW-v1.1.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | 7b7547539a8e97adc5731f86d94718c30c8dc987 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
+| docs/history/INDEX.md | d105072e8ccdcded7c1373470cca0d3b52ae66e9 | e8bcf95a648ac3e36347714f32a53ab9a5e24084 | Development candidate before final v1.1 review dispositions in jot-6ab; joins main on feature merge. |
